@@ -225,7 +225,8 @@
                 <h3>OBS Setup</h3>
                 <div style="font-size: 0.85em; color: #ccc; line-height: 1.4;">
                     <div style="margin-bottom: 4px;">Add a <strong>Browser</strong> source in OBS with this URL:</div>
-                    <div style="background: #111; padding: 6px; border: 1px solid #333; border-radius: 4px; font-family: 'Roboto Mono', monospace; user-select: all; cursor: text; color: #4caf50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">http://108.61.222.248:3000</div>
+                    <div id="obs-url-display" style="background: #111; padding: 6px; border: 1px solid #333; border-radius: 4px; font-family: 'Roboto Mono', monospace; user-select: all; cursor: text; color: #4caf50; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">http://108.61.222.248:3000?steamId=</div>
+                    <small>Paste your SteamID or username after <strong>steamId=</strong></small>
                 </div>
             </div>
         </div>
@@ -301,6 +302,7 @@
             showMainMapStats: document.getElementById('show-main-map-stats'),
             autoFollowStage: document.getElementById('auto-follow-stage'),
             horizontalLayout: document.getElementById('horizontal-layout'),
+            obsUrlDisplay: document.getElementById('obs-url-display'),
             opacity: document.getElementById('opacity'),
             opacityVal: document.getElementById('opacity-val'),
             themePreset: document.getElementById('theme-preset'),
@@ -315,6 +317,7 @@
         ipcRenderer.send('get-config');
         ipcRenderer.on('config-updated', (event, config) => {
             els.steamid.value = config.steamId || '';
+            els.obsUrlDisplay.innerText = `http://108.61.222.248:3000?steamId=${config.steamId || ''}`;
             els.alwaysOnTop.checked = config.alwaysOnTop !== false;
             els.showMainMapStats.checked = config.showMainMapStats || false;
             els.autoFollowStage.checked = config.autoFollowStage !== false;
@@ -369,7 +372,10 @@
             }, 400);
         }
 
-        els.steamid.addEventListener('input', autoSave);
+        els.steamid.addEventListener('input', () => {
+            els.obsUrlDisplay.innerText = `http://108.61.222.248:3000?steamId=${els.steamid.value}`;
+            autoSave();
+        });
         els.alwaysOnTop.addEventListener('change', autoSave);
         els.showMainMapStats.addEventListener('change', autoSave);
         els.autoFollowStage.addEventListener('change', autoSave);
