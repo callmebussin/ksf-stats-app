@@ -9,8 +9,6 @@ let isQuitting = false;
 let isResizing = false;
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
-const SERVER_CONFIG_PATH = path.join(__dirname, '..', 'server', 'config.json');
-const OVERLAY_CONFIG_PATH = path.join(__dirname, '..', 'server', 'overlay-config.json');
 
 let appConfig = {
     steamId: "",
@@ -19,7 +17,6 @@ let appConfig = {
     windowY: 100,
     scale: 1.0,
     alwaysOnTop: true,
-    serverPort: 3000,
     showMainMapStats: false,
     autoFollowStage: true,
     horizontalLayout: false,
@@ -37,13 +34,6 @@ function loadConfig() {
             const data = fs.readFileSync(CONFIG_PATH);
             appConfig = { ...appConfig, ...JSON.parse(data) };
         }
-        
-        if (fs.existsSync(SERVER_CONFIG_PATH)) {
-            const serverData = JSON.parse(fs.readFileSync(SERVER_CONFIG_PATH));
-            if (serverData.port) {
-                appConfig.serverPort = serverData.port;
-            }
-        }
     } catch (e) {
         console.error("Failed to load config", e);
     }
@@ -52,33 +42,6 @@ function loadConfig() {
 function saveConfig() {
     try {
         fs.writeFileSync(CONFIG_PATH, JSON.stringify(appConfig, null, 2));
-        
-        try {
-            let serverConfig = {};
-            if (fs.existsSync(SERVER_CONFIG_PATH)) {
-                serverConfig = JSON.parse(fs.readFileSync(SERVER_CONFIG_PATH));
-            }
-            if (serverConfig.port !== appConfig.serverPort) {
-                serverConfig.port = appConfig.serverPort;
-                fs.writeFileSync(SERVER_CONFIG_PATH, JSON.stringify(serverConfig, null, 2));
-            }
-        } catch (serverErr) {
-            console.error("Failed to update server config", serverErr);
-        }
-
-        try {
-            const overlayConfig = {
-                steamId: appConfig.steamId,
-                refreshRate: appConfig.refreshRate || 60,
-                showMainMapStats: appConfig.showMainMapStats || false,
-                autoFollowStage: appConfig.autoFollowStage !== false,
-                horizontalLayout: appConfig.horizontalLayout || false,
-                theme: appConfig.theme || {}
-            };
-            fs.writeFileSync(OVERLAY_CONFIG_PATH, JSON.stringify(overlayConfig, null, 2));
-        } catch (overlayErr) {
-            console.error("Failed to write overlay config", overlayErr);
-        }
 
         if (overlayWindow) overlayWindow.webContents.send('config-updated', appConfig);
         if (configWindow) configWindow.webContents.send('config-updated', appConfig);
@@ -199,14 +162,6 @@ ipcMain.on('save-config', (event, newConfig) => {
 
 ipcMain.on('get-config', (event) => {
     event.reply('config-updated', appConfig);
-});
-
-ipcMain.on('set-port', (event, value) => {
-    const newPort = parseInt(value);
-    if (!isNaN(newPort) && newPort !== appConfig.serverPort) {
-        appConfig.serverPort = newPort;
-        saveConfig();
-    }
 });
 
 ipcMain.on('open-external', (event, url) => {

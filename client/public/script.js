@@ -1,11 +1,12 @@
 const isElectron = (typeof process !== 'undefined') && process.versions && process.versions.electron;
 const ipcRenderer = isElectron ? require('electron').ipcRenderer : null;
 
+const SERVER_URL = 'http://108.61.222.248:3000';
+
 let currentConfig = {
     steamId: "",
     refreshRate: 60,
     opacity: 100,
-    serverPort: 3000,
     showMainMapStats: false,
     autoFollowStage: true,
     horizontalLayout: false,
@@ -69,9 +70,7 @@ const ui = {
 };
 
 function getBaseUrl() {
-    return ipcRenderer
-        ? `http://localhost:${currentConfig.serverPort || 3000}`
-        : window.location.origin;
+    return SERVER_URL;
 }
 
 function broadcastBrowseState(zone) {

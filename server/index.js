@@ -315,6 +315,6 @@ app.get('/api/browse', (req, res) => {
     res.json({ ...browseState, config });
 });
 
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on 0.0.0.0:${PORT}`);
 });
