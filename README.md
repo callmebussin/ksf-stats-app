@@ -1,46 +1,36 @@
 # KSF Overlay
 
-A Twitch-compatible player card overlay that displays real-time KSF stats for a player's current map.
+Real-time KSF surf timer stats overlay for desktop and OBS.
 
-## Architecture
-- **Backend (Server)**: Node.js/Express proxy that securely communicates with the KSF API.
-- **Frontend (Client)**: Electron application that displays the overlay and manages configuration.
+## Download
+
+Grab the latest release from the [Releases page](https://github.com/callmebussin/ksf-overlay/releases).
 
 ## Setup
 
-### 1. Backend Server
-The server must be running for the overlay to fetch data.
+### Desktop Overlay
+1. Download `KSF-Overlay-v1.0.1-win-x64.zip` from Releases
+2. Extract and run `KSF Overlay 1.0.1.exe`
+3. Enter your SteamID or custom URL username in Settings
 
-1. Navigate to `server/`.
-2. Install dependencies: `npm install`.
-3. Create `.env` file (already created) with your KSF API Token.
-4. Start the server:
-   ```bash
-   npm start
-   ```
-   Server runs on `http://localhost:3000`.
-
-### 2. Client Overlay
-The overlay connects to the local backend.
-
-1. Navigate to `client/`.
-2. Install dependencies: `npm install`.
-3. Start the application:
-   ```bash
-   npm start
-   ```
+### OBS Browser Source
+1. Add a **Browser** source in OBS
+2. Set the URL to `http://108.61.222.248:3000`
+3. The overlay will mirror your desktop settings automatically
 
 ## Configuration
-- Right-click the tray icon or use the opened Config window.
-- Enter your **SteamID** (e.g., `STEAM_0:1:12345678`).
-- Set refresh rate (default 60s).
-- Configure opacity.
+- Enter your **SteamID** (e.g. `STEAM_0:1:12345678`) or Steam custom URL username
+- Toggle **Always On Top** for in-game use
+- Toggle **Show Map Stats Separately** to display main map and stage/bonus as separate cards
+- Toggle **Auto-Follow Current Stage** to track the player's active zone
+- Toggle **Wide Layout** for side-by-side cards
+- Choose a **Preset Theme** (Dark, Light, Glass Blue) or customize colors
+- Adjust **Overlay Opacity**
 
-## Usage
-- The overlay window is transparent and always on top.
-- Press **F5** (or configured key) to manually refresh stats (60s cooldown).
-- The overlay automatically updates based on the refresh rate.
-
-## Development Notes
-- **Security**: The KSF API key is stored only on the backend server. The client never communicates directly with KSF.
-- **Rate Limiting**: The backend enforces rate limits to prevent API abuse.
+## Features
+- Real-time KSF stats with automatic updates
+- Stage/bonus navigation with slide animations
+- Time improvement detection with roll animation
+- Steam avatar and online status display
+- Synced browsing between desktop and OBS browser source
+- Draggable, transparent, always-on-top overlay window
