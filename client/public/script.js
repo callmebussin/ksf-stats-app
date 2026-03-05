@@ -1009,7 +1009,20 @@ function updateUI(data) {
     } else {
         ui.statusIndicator.innerText = "OFFLINE";
         ui.statusIndicator.className = "status offline";
-        showLoadingState();
+        clearStats();
+        ui.mainMapSection.style.display = 'none';
+        ui.mainMapSection.classList.remove('expanded');
+        ui.sectionDivider.style.display = 'none';
+        ui.stageNav.style.display = 'none';
+        ui.mapName.innerText = "Player is offline";
+        ui.serverName.style.display = 'none';
+        ui.serverPlayers.style.display = 'none';
+
+        if (data.playerName) {
+            ui.playerNameText.innerText = data.playerName;
+        } else if (data.rawStatus?.name) {
+            ui.playerNameText.innerText = data.rawStatus.name;
+        }
     }
 
     resizeOverlay();

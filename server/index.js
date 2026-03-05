@@ -374,7 +374,13 @@ app.get('/api/player/:input', async (req, res) => {
             return res.status(502).json({ error: "Failed to fetch status from KSF API" });
         }
 
+        // Log full response structure to diagnose issues
+        console.log(`[PLAYER] Raw KSF response keys for ${steamid}: ${JSON.stringify(Object.keys(statusResponse || {}))}`);
+        console.log(`[PLAYER] Raw KSF response.data snippet for ${steamid}: ${JSON.stringify(statusResponse.data || {}).substring(0, 500)}`);
+
         const statusData = statusResponse.data;
+        console.log(`[PLAYER] Parsed status for ${steamid}: onlineStatus=${statusData?.onlineStatus} hasServer=${!!statusData?.server}`);
+
         const steamId64 = steamIdTo64(steamid);
         const avatarUrl = await fetchSteamAvatar(steamId64);
 
