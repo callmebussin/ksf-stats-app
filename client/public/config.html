@@ -20,28 +20,7 @@
         }
 
         /* ── Layout ─────────────────────────────────── */
-        .app-header {
-            padding: 14px 20px 10px;
-            border-bottom: 1px solid #2a2a2a;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .app-header h1 {
-            font-size: 14px;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-            color: #fff;
-        }
-        .app-header .credits-inline {
-            font-size: 11px;
-            color: #555;
-        }
-        .app-header .credits-inline a {
-            color: #666;
-            text-decoration: none;
-        }
-        .app-header .credits-inline a:hover { color: #999; }
+        /* header removed */
         .glow-name {
             font-weight: 700;
             background: linear-gradient(90deg, #7c5cbf, #3498db, #2ecc71, #f1c40f, #e74c3c, #7c5cbf);
@@ -252,25 +231,37 @@
             border-top: 1px solid #2a2a2a;
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: 6px;
+            justify-content: space-between;
             font-size: 11px;
             color: #555;
         }
-        .app-footer a {
-            color: #666;
+        .version-label {
+            font-weight: 700;
+            background: linear-gradient(90deg, #0078d4, #00b4d8, #0078d4);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease infinite;
+        }
+        .github-btn {
+            color: #8b949e;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+        .github-btn:hover { color: #c9d1d9; }
+        .credits-right {
+            font-size: 11px;
+            color: #555;
+        }
+        .credits-right a {
             text-decoration: none;
         }
-        .app-footer a:hover { color: #999; text-decoration: underline; }
     </style>
 </head>
 <body>
-    <div class="app-header">
-        <h1>KSF Stats Overlay</h1>
-        <span class="credits-inline">by <a href="#" id="ksf-link" class="glow-name">bussn</a></span>
-    </div>
-
-    <div class="main-grid">
+    <div class="main-grid" style="padding-top: 16px;">
         <!-- Column 1: Player + Toggles -->
         <div style="display: flex; flex-direction: column; gap: 12px;">
             <div class="panel">
@@ -362,14 +353,21 @@
                         <div class="color-item">Border <input type="color" id="border-color" value="#ffffff"></div>
                     </div>
                 </div>
+                <div class="input-group">
+                    <label class="input-label">Zone Bar Colors</label>
+                    <div class="colors-grid">
+                        <div class="color-item">Completed <input type="color" id="zone-completed-color" value="#2ecc71"></div>
+                        <div class="color-item">Incomplete <input type="color" id="zone-not-completed-color" value="#e74c3c"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="app-footer">
-        <span>coming soon: styles and 100t</span>
-        <span style="color:#333;">|</span>
-        <a href="#" id="github-link">github</a>
+        <span class="version-label">v1.1.0</span>
+        <a href="#" id="github-link" class="github-btn">GitHub</a>
+        <span class="credits-right">by <a href="#" id="ksf-link" class="glow-name">bussn</a></span>
     </div>
 
     <script>
@@ -400,7 +398,9 @@
                 textColor: document.getElementById('text-color'),
                 accentColor: document.getElementById('accent-color'),
                 borderColor: document.getElementById('border-color')
-            }
+            },
+            zoneCompletedColor: document.getElementById('zone-completed-color'),
+            zoneNotCompletedColor: document.getElementById('zone-not-completed-color')
         };
 
         ipcRenderer.send('get-config');
@@ -425,6 +425,8 @@
                 if (config.theme.accentColor) els.colors.accentColor.value = config.theme.accentColor;
                 if (config.theme.borderColor) els.colors.borderColor.value = config.theme.borderColor;
             }
+            if (config.zoneCompletedColor) els.zoneCompletedColor.value = config.zoneCompletedColor;
+            if (config.zoneNotCompletedColor) els.zoneNotCompletedColor.value = config.zoneNotCompletedColor;
         });
 
         els.opacity.addEventListener('input', (e) => {
@@ -458,6 +460,8 @@
                     showProfileStats: els.showProfileStats.checked,
                     showDetailedStats: els.showDetailedStats.checked,
                     opacity: parseInt(els.opacity.value),
+                    zoneCompletedColor: els.zoneCompletedColor.value,
+                    zoneNotCompletedColor: els.zoneNotCompletedColor.value,
                     theme: {
                         bgColor: els.colors.bgColor.value,
                         textColor: els.colors.textColor.value,
@@ -486,6 +490,8 @@
         els.colors.textColor.addEventListener('input', autoSave);
         els.colors.accentColor.addEventListener('input', autoSave);
         els.colors.borderColor.addEventListener('input', autoSave);
+        els.zoneCompletedColor.addEventListener('input', autoSave);
+        els.zoneNotCompletedColor.addEventListener('input', autoSave);
 
         document.getElementById('github-link').addEventListener('click', (e) => {
             e.preventDefault();

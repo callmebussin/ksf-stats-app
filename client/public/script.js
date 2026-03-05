@@ -14,7 +14,9 @@ let currentConfig = {
     showDetailedStats: true,
     autoFollowStage: true,
     horizontalLayout: false,
-    theme: {}
+    theme: {},
+    zoneCompletedColor: "#2ecc71",
+    zoneNotCompletedColor: "#e74c3c"
 };
 
 let refreshInterval = null;
@@ -37,10 +39,11 @@ const ui = {
     playerFlag: document.getElementById('player-flag'),
     mapName: document.getElementById('map-name'),
     mapSpinner: document.getElementById('map-spinner'),
+    tierBadge: document.getElementById('tier-badge'),
     statusIndicator: document.getElementById('status-indicator'),
     updateTimer: document.getElementById('update-timer'),
-    serverName: document.getElementById('server-name'),
-    serverPlayers: document.getElementById('server-players'),
+    playingOnLabel: document.getElementById('playing-on-label'),
+    serverInfo: document.getElementById('server-info'),
     playersModal: document.getElementById('players-modal'),
     playersList: document.getElementById('players-list'),
     
@@ -132,14 +135,14 @@ ui.mapName.addEventListener('click', () => {
     }).catch(() => {});
 });
 
-ui.serverPlayers.addEventListener('click', (e) => {
+ui.serverInfo.addEventListener('click', (e) => {
     e.stopPropagation();
     const isOpen = ui.playersModal.style.display === 'block';
     ui.playersModal.style.display = isOpen ? 'none' : 'block';
 });
 
 document.addEventListener('click', (e) => {
-    if (!ui.playersModal.contains(e.target) && e.target !== ui.serverPlayers) {
+    if (!ui.playersModal.contains(e.target) && e.target !== ui.serverInfo) {
         ui.playersModal.style.display = 'none';
     }
 });
@@ -300,6 +303,8 @@ function applyConfig() {
          if (currentConfig.theme.bgColor) root.style.setProperty('--bg-color', currentConfig.theme.bgColor);
          if (currentConfig.theme.borderColor) root.style.setProperty('--border-color', currentConfig.theme.borderColor);
     }
+    if (currentConfig.zoneCompletedColor) root.style.setProperty('--zone-completed', currentConfig.zoneCompletedColor);
+    if (currentConfig.zoneNotCompletedColor) root.style.setProperty('--zone-not-completed', currentConfig.zoneNotCompletedColor);
     
     const card = document.getElementById('card');
     const layout = document.getElementById('cards-layout');
@@ -578,6 +583,20 @@ function formatDate(dateVal) {
         }
     }
     return "-";
+}
+
+let currentMapTier = null;
+
+function setTierBadge(tier) {
+    const t = parseInt(tier);
+    if (!t || t < 1 || t > 8) {
+        ui.tierBadge.style.display = 'none';
+        return;
+    }
+    currentMapTier = t;
+    ui.tierBadge.innerText = `T${t}`;
+    ui.tierBadge.className = `tier-badge t${t}`;
+    ui.tierBadge.style.display = 'inline';
 }
 
 function updateMapCompletionStatus(mapInfo) {
@@ -1026,6 +1045,8 @@ async function fetchMapStats(map, baseData) {
 
         updateNavButtons();
         updateMapCompletionStatus(baseData.mapInfo);
+        // Set tier from mapstats response
+        if (result.tier) setTierBadge(result.tier);
         resizeOverlay();
     } catch (e) {}
     finally {
@@ -1130,12 +1151,16 @@ function updateUI(data) {
         ui.mapSpinner.style.display = 'none';
         ui.mapName.innerText = data.map || "Unknown Map";
 
+        // Set tier from mapInfo (if available from server status)
+        if (data.mapInfo && data.mapInfo.tier) {
+            setTierBadge(data.mapInfo.tier);
+        }
+
         if (data.serverName) {
-            const otherCount = (data.serverPlayers ? data.serverPlayers.length : 1) - 1;
-            ui.serverName.innerText = data.serverName;
-            ui.serverPlayers.innerText = otherCount > 0 ? `playing with ${otherCount} other${otherCount > 1 ? 's' : ''}` : 'playing solo';
-            ui.serverName.style.display = 'block';
-            ui.serverPlayers.style.display = 'block';
+            const totalOnline = data.serverPlayers ? data.serverPlayers.length : 1;
+            ui.playingOnLabel.style.display = 'block';
+            ui.serverInfo.innerText = `${data.serverName} \u2022 ${totalOnline} online`;
+            ui.serverInfo.style.display = 'block';
 
             ui.playersList.innerHTML = '';
             if (data.serverPlayers) {
@@ -1167,8 +1192,8 @@ function updateUI(data) {
                 }
             }
         } else {
-            ui.serverName.style.display = 'none';
-            ui.serverPlayers.style.display = 'none';
+            ui.playingOnLabel.style.display = 'none';
+            ui.serverInfo.style.display = 'none';
         }
 
         if (data.map && data.map !== currentMap) {
@@ -1273,9 +1298,10 @@ function updateUI(data) {
         ui.sectionDivider.style.display = 'none';
         ui.stageNav.style.display = 'none';
         ui.mapName.innerText = "Player is offline";
+        ui.tierBadge.style.display = 'none';
         ui.zoneBarContainer.style.display = 'none';
-        ui.serverName.style.display = 'none';
-        ui.serverPlayers.style.display = 'none';
+        ui.playingOnLabel.style.display = 'none';
+        ui.serverInfo.style.display = 'none';
 
         if (data.playerName) {
             ui.playerNameText.innerText = data.playerName;

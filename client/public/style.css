@@ -3,6 +3,8 @@
     --text-color: #4a3f6b;
     --accent-color: #7c5cbf;
     --border-color: #d5cee6;
+    --zone-completed: #2ecc71;
+    --zone-not-completed: #e74c3c;
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -330,11 +332,11 @@ body {
 }
 
 .zone-box.completed {
-    background: #2ecc71;
+    background: var(--zone-completed);
 }
 
 .zone-box.not-completed {
-    background: #e74c3c;
+    background: var(--zone-not-completed);
 }
 
 .zone-box.no-data {
@@ -372,6 +374,32 @@ body {
     border-top-color: var(--accent-color);
 }
 
+.map-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.tier-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: #fff;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+}
+
+.tier-badge.t1 { background: #2ecc71; }
+.tier-badge.t2 { background: #58c44c; }
+.tier-badge.t3 { background: #a8bf26; }
+.tier-badge.t4 { background: #d4a017; }
+.tier-badge.t5 { background: #d4791c; }
+.tier-badge.t6 { background: #c0392b; }
+.tier-badge.t7 { background: #962d22; }
+.tier-badge.t8 { background: #6b1e18; }
+
 .map-name-clickable {
     display: inline;
     cursor: pointer;
@@ -388,31 +416,31 @@ body {
     opacity: 1 !important;
 }
 
-.server-name {
-    font-size: 12px;
+.playing-on-label {
+    font-size: 9px;
     font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     color: var(--text-color);
-    opacity: 0.7;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 160px;
+    opacity: 0.4;
 }
 
-.server-players-link {
+.server-info-link {
     font-size: 11px;
+    font-weight: 600;
     color: var(--text-color);
-    opacity: 0.55;
+    opacity: 0.65;
     cursor: pointer;
     -webkit-app-region: no-drag;
     position: relative;
-    text-decoration: underline;
-    text-decoration-style: dotted;
     transition: opacity 0.15s;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
 }
 
-.server-players-link:hover {
+.server-info-link:hover {
     opacity: 1;
 }
 

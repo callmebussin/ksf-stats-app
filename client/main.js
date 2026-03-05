@@ -24,6 +24,8 @@ let appConfig = {
     showDetailedStats: true,
     autoFollowStage: true,
     horizontalLayout: false,
+    zoneCompletedColor: "#2ecc71",
+    zoneNotCompletedColor: "#e74c3c",
     theme: {
         accentColor: "#7c5cbf",
         textColor: "#4a3f6b",

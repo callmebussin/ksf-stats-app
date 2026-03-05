@@ -12,11 +12,14 @@
             <div id="player-avatar" class="avatar"></div>
             <div class="player-info">
                 <h2 id="player-name"><img id="player-flag" class="player-flag" style="display:none"><span id="player-name-text">Player Name</span></h2>
-                <h3 id="map-name" class="map-name-clickable" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading map data...</h3>
+                <div class="map-name-row">
+                    <h3 id="map-name" class="map-name-clickable" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading map data...</h3>
+                    <span id="tier-badge" class="tier-badge" style="display: none;">T?</span>
+                </div>
             </div>
             <div class="header-right">
-                <span id="server-name" class="server-name" style="display: none;"></span>
-                <span id="server-players" class="server-players-link" style="display: none;"></span>
+                <span class="playing-on-label" id="playing-on-label" style="display: none;">Playing on</span>
+                <span id="server-info" class="server-info-link" style="display: none;"></span>
                 <div id="players-modal" class="players-modal" style="display: none;">
                     <div id="players-list" class="players-list"></div>
                 </div>

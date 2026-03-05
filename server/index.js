@@ -401,7 +401,8 @@ app.get('/api/player/:input', async (req, res) => {
             responsePayload.mapInfo = {
                 type: statusData.server.maptype,
                 cpCount: statusData.server.cp_count,
-                bCount: statusData.server.b_count
+                bCount: statusData.server.b_count,
+                tier: statusData.server.tier || null
             };
             responsePayload.serverName = statusData.server.surftimer_servername || statusData.server.hostname || null;
             responsePayload.serverPlayers = [];
