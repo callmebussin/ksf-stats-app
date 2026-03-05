@@ -721,6 +721,44 @@ function hideProfile() {
     ui.profileDivider.style.display = 'none';
 }
 
+let mapStatsFetching = null;
+
+async function fetchMapStats(map, baseData) {
+    if (!currentConfig.steamId || !map) return;
+    if (mapStatsFetching === map) return;
+    mapStatsFetching = map;
+
+    try {
+        const resp = await fetch(`${getBaseUrl()}/api/mapstats/${encodeURIComponent(currentConfig.steamId)}/${encodeURIComponent(map)}`);
+        if (!resp.ok) return;
+        const result = await resp.json();
+
+        if (!result.zones || currentMap !== map) return;
+
+        for (const [zoneIdStr, zoneData] of Object.entries(result.zones)) {
+            const zoneId = parseInt(zoneIdStr);
+            if (isNaN(zoneId)) continue;
+            if (zoneCache.has(zoneId)) continue;
+
+            zoneCache.set(zoneId, {
+                ...zoneData,
+                map: map,
+                mapInfo: baseData.mapInfo,
+                playerName: baseData.playerName,
+                avatarUrl: baseData.avatarUrl,
+                steamId64: baseData.steamId64,
+                status: baseData.status
+            });
+        }
+
+        updateNavButtons();
+        resizeOverlay();
+    } catch (e) {}
+    finally {
+        if (mapStatsFetching === map) mapStatsFetching = null;
+    }
+}
+
 function updateUI(data) {
     if (data.avatarUrl) {
         ui.avatar.style.backgroundImage = `url('${data.avatarUrl}')`;
@@ -739,6 +777,7 @@ function updateUI(data) {
             zoneCache.clear();
             browsingZone = null;
             currentMap = data.map;
+            fetchMapStats(data.map, data);
         }
 
         const zoneId = data.zone !== undefined ? parseInt(data.zone) : null;

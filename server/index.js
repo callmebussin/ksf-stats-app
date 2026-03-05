@@ -323,6 +323,68 @@ app.get('/api/player/:input', async (req, res) => {
     }
 });
 
+app.get('/api/mapstats/:input/:map', async (req, res) => {
+    const { input, map } = req.params;
+    const gameType = req.query.game || serverConfig.defaultGame || 'css';
+
+    if (!input || !map) {
+        return res.status(400).json({ error: "Missing SteamID or map name" });
+    }
+
+    try {
+        const steamid = await resolveSteamID(input);
+        if (!steamid) {
+            return res.status(404).json({ error: "Could not resolve SteamID" });
+        }
+
+        const url = `${KSF_BASE_URL}/${gameType}/steamid/${steamid}/prinfo/map/${map}/0`;
+        const response = await fetchKSFData(url);
+
+        if (!response || response.status !== 'OK' || !response.data) {
+            return res.status(502).json({ error: "Failed to fetch map stats from KSF API" });
+        }
+
+        const d = response.data;
+        const zones = {};
+
+        if (d.PRInfo && Array.isArray(d.PRInfo)) {
+            for (const pr of d.PRInfo) {
+                const zoneId = parseInt(pr.zoneID);
+                if (isNaN(zoneId)) continue;
+
+                const group = calculateGroup(pr.rank, pr.totalRanks);
+
+                zones[zoneId] = {
+                    zone: zoneId,
+                    time: pr.surfTime,
+                    rank: pr.rank,
+                    totalRanks: pr.totalRanks,
+                    completions: pr.count,
+                    attempts: pr.attempts,
+                    avgVel: pr.avgVel,
+                    startVel: pr.startVel,
+                    endVel: pr.endVel,
+                    totalTime: pr.totalSurfTime,
+                    firstDate: pr.firstDate,
+                    dateLastPlayed: pr.dateLastPlayed,
+                    group: group || null,
+                    wrDiff: null
+                };
+            }
+        }
+
+        res.json({
+            map,
+            tier: d.Tier,
+            zones
+        });
+
+    } catch (error) {
+        console.error("MapStats Error:", error);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
 app.get('/api/profile/:input', async (req, res) => {
     const { input } = req.params;
     const gameType = req.query.game || serverConfig.defaultGame || 'css';
