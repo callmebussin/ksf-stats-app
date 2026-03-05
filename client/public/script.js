@@ -91,6 +91,11 @@ const ui = {
     mainStatAvgVel: document.getElementById('main-stat-avgvel'),
     mainStatTotalTime: document.getElementById('main-stat-totaltime'),
     mainStatFirstDate: document.getElementById('main-stat-firstdate'),
+    mapCompletionRow: document.getElementById('map-completion-row'),
+    mapCompletionStatus: document.getElementById('map-completion-status'),
+    mapCompletionStages: document.getElementById('map-completion-stages'),
+    mapCompletionBonuses: document.getElementById('map-completion-bonuses'),
+
     mainStatStartVel: document.getElementById('main-stat-startvel'),
     mainStatEndVel: document.getElementById('main-stat-endvel')
 };
@@ -517,6 +522,62 @@ function formatDate(dateVal) {
     return "-";
 }
 
+function updateMapCompletionStatus(mapInfo) {
+    if (!mapInfo) {
+        ui.mapCompletionRow.style.display = 'none';
+        return;
+    }
+
+    const mapType = parseInt(mapInfo.type); // 0 = staged, 1 = linear
+    const totalStages = parseInt(mapInfo.cpCount) || 0;
+    const totalBonuses = parseInt(mapInfo.bCount) || 0;
+    const isLinear = mapType === 1;
+
+    // Check main map completion (zone 0)
+    const zone0 = zoneCache.get(0);
+    const mapCompleted = zone0 && parseInt(zone0.completions) > 0;
+
+    // Count completed stages (zones 1..totalStages)
+    let stagesCompleted = 0;
+    if (isLinear) {
+        // Linear maps: 1 stage = the map itself
+        stagesCompleted = mapCompleted ? 1 : 0;
+    } else {
+        for (let i = 1; i <= totalStages; i++) {
+            const z = zoneCache.get(i);
+            if (z && parseInt(z.completions) > 0) stagesCompleted++;
+        }
+    }
+
+    // Count completed bonuses (zones 31..30+totalBonuses)
+    let bonusesCompleted = 0;
+    for (let i = 31; i <= 30 + totalBonuses; i++) {
+        const z = zoneCache.get(i);
+        if (z && parseInt(z.completions) > 0) bonusesCompleted++;
+    }
+
+    // Update UI
+    ui.mapCompletionRow.style.display = 'flex';
+
+    if (mapCompleted) {
+        ui.mapCompletionStatus.innerText = 'Completion';
+        ui.mapCompletionStatus.className = 'completion-tag completed';
+    } else {
+        ui.mapCompletionStatus.innerText = 'No Completion';
+        ui.mapCompletionStatus.className = 'completion-tag no-completion';
+    }
+
+    const stageTotal = isLinear ? 1 : totalStages;
+    ui.mapCompletionStages.innerText = `S: ${stagesCompleted}/${stageTotal}`;
+    
+    if (totalBonuses > 0) {
+        ui.mapCompletionBonuses.innerText = `B: ${bonusesCompleted}/${totalBonuses}`;
+        ui.mapCompletionBonuses.style.display = 'inline';
+    } else {
+        ui.mapCompletionBonuses.style.display = 'none';
+    }
+}
+
 function formatZone(zoneId, mapInfo) {
     const zid = parseInt(zoneId);
     if (isNaN(zid)) return "Unknown";
@@ -613,6 +674,7 @@ function showLoadingState() {
     ui.mainMapSection.classList.remove('expanded');
     ui.sectionDivider.style.display = 'none';
     ui.stageNav.style.display = 'none';
+    ui.mapCompletionRow.style.display = 'none';
     ui.mapName.innerHTML = '<span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading map data...';
     ui.mapSpinner = document.getElementById('map-spinner');
 }
@@ -814,6 +876,7 @@ async function fetchMapStats(map, baseData) {
         }
 
         updateNavButtons();
+        updateMapCompletionStatus(baseData.mapInfo);
         resizeOverlay();
     } catch (e) {}
     finally {
@@ -991,6 +1054,9 @@ function updateUI(data) {
         const showMainMap = currentConfig.showMainMapStats && mainMapData;
         showMainMapPanel(showMainMap, mainMapData);
 
+        // ── Map completion status in header ──────────────────────────
+        updateMapCompletionStatus(data.mapInfo);
+
         // ── Stage/Bonus panel logic ──────────────────────────────────
         ui.stageNav.style.display = 'flex';
 
@@ -1053,6 +1119,7 @@ function updateUI(data) {
         ui.sectionDivider.style.display = 'none';
         ui.stageNav.style.display = 'none';
         ui.mapName.innerText = "Player is offline";
+        ui.mapCompletionRow.style.display = 'none';
         ui.serverName.style.display = 'none';
         ui.serverPlayers.style.display = 'none';
 
