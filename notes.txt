@@ -3,3 +3,7 @@ lobby leaderboard
 comparison with other players
 
 100t and styles support
+
+show country flag next to their name
+click the map name to copy to clipboard
+

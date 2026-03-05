@@ -532,8 +532,9 @@ function getGroupInfo(group, completions) {
     const c = parseInt(completions);
     const hasCompletion = !isNaN(c) && c > 0;
 
+    if (!hasCompletion) return { text: "No Completion", css: "group-no-comp" };
+
     if (!group || group === "-") {
-        if (!hasCompletion) return { text: "No Completion", css: "group-no-comp" };
         return { text: "-", css: "" };
     }
 
@@ -542,11 +543,7 @@ function getGroupInfo(group, completions) {
 
     const g = label.toLowerCase();
 
-    if (g === "no group") {
-        if (!hasCompletion) return { text: "No Completion", css: "group-no-comp" };
-        return { text: "No Group", css: "group-no-group" };
-    }
-
+    if (g === "no group") return { text: "No Group", css: "group-no-group" };
     if (g === "wr") return { text: "WR Holder", css: "group-wr" };
     if (g === "top 10") return { text: "Top 10", css: "group-top10" };
     if (g === "group 1") return { text: "Group 1", css: "group-g1" };
