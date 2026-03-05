@@ -839,12 +839,17 @@ function updateUI(data) {
             mainMapData = zoneCache.get(0);
         }
         const showMainMap = currentConfig.showMainMapStats && mainMapData && viewingZone !== 0;
+        
+        const card = document.getElementById('card');
+        const layout = document.getElementById('cards-layout');
         if (showMainMap) {
             ui.mainMapSection.style.display = 'block';
             requestAnimationFrame(() => ui.mainMapSection.classList.add('expanded'));
             ui.sectionDivider.style.display = 'block';
             ui.sectionDivider.style.opacity = '1';
             populateMainMapStats(mainMapData);
+            card.classList.add('wide-layout');
+            layout.classList.add('horizontal');
         } else {
             ui.mainMapSection.classList.remove('expanded');
             setTimeout(() => {
@@ -856,6 +861,10 @@ function updateUI(data) {
             setTimeout(() => {
                 ui.sectionDivider.style.display = 'none';
             }, 400);
+            if (!currentConfig.horizontalLayout) {
+                card.classList.remove('wide-layout');
+                layout.classList.remove('horizontal');
+            }
         }
 
         ui.stageNav.style.display = 'flex';
