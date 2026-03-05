@@ -312,36 +312,35 @@ function applyConfig() {
         layout.classList.remove('horizontal');
     }
 
-    // Profile visibility: showProfile controls the entire profile section
-    if (currentConfig.showProfile || currentConfig.showRankCard || currentConfig.showProfileStats) {
-        if (profileCache) populateProfile(profileCache);
-    } else {
-        hideProfile();
-    }
+    // ── Profile section visibility ─────────────────────────────
+    const showRankCard = currentConfig.showRankCard !== false;
+    const showProfileStats = currentConfig.showProfileStats !== false;
+    const showAnyProfile = showRankCard || showProfileStats;
 
-    // Rank card visibility
     const rankCard = document.getElementById('profile-rank-card');
-    if (rankCard) {
-        rankCard.style.display = currentConfig.showRankCard !== false ? '' : 'none';
-    }
-
-    // Profile stats grids visibility
     const profileStatsGrids = document.getElementById('profile-stats-grids');
-    if (profileStatsGrids) {
-        profileStatsGrids.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
-    }
+    if (rankCard) rankCard.style.display = showRankCard ? '' : 'none';
+    if (profileStatsGrids) profileStatsGrids.style.display = showProfileStats ? '' : 'none';
 
-    // Hide entire profile section + divider if both rank card and stats are off
-    if (currentConfig.showRankCard === false && currentConfig.showProfileStats === false) {
+    if (showAnyProfile && profileCache) {
+        populateProfile(profileCache);
+    } else if (!showAnyProfile) {
         hideProfile();
     }
 
-    // Zone bar visibility
-    if (currentConfig.showZoneBar === false) {
+    // ── Zone bar visibility ─────────────────────────────────────
+    // Re-render zone bar when toggling on, hide when toggling off
+    if (currentConfig.showZoneBar !== false && hasInitialized && currentMap) {
+        // Find mapInfo from any cached zone entry
+        const anyZone = zoneCache.values().next().value;
+        if (anyZone && anyZone.mapInfo) {
+            updateMapCompletionStatus(anyZone.mapInfo);
+        }
+    } else if (currentConfig.showZoneBar === false) {
         ui.zoneBarContainer.style.display = 'none';
     }
 
-    // Detailed stats visibility (stats-grid + advanced-stats-grid in map/stage cards)
+    // ── Detailed stats visibility ───────────────────────────────
     const detailedEls = document.querySelectorAll('.detailed-stats');
     for (const el of detailedEls) {
         el.style.display = currentConfig.showDetailedStats !== false ? '' : 'none';
@@ -353,6 +352,8 @@ function applyConfig() {
         ui.statusIndicator.innerHTML = '<span class="status-dot"></span>SETUP';
         ui.statusIndicator.className = "status-badge offline";
     }
+
+    resizeOverlay();
 }
 
 function applyRemoteConfig(cfg) {

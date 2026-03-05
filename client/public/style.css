@@ -335,9 +335,8 @@ body {
 }
 
 .zone-box.active {
-    outline: 2px solid var(--accent-color);
-    outline-offset: -1px;
-    z-index: 1;
+    border: 2px solid var(--bg-color);
+    box-sizing: border-box;
 }
 
 .zone-bar-tooltip {
