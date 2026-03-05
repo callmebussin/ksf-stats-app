@@ -269,6 +269,16 @@ app.get('/api/player/:input', async (req, res) => {
                 cpCount: statusData.server.cp_count,
                 bCount: statusData.server.b_count
             };
+            responsePayload.serverName = statusData.server.surftimer_servername || statusData.server.hostname || null;
+            responsePayload.serverPlayers = [];
+            if (statusData.server.players && Array.isArray(statusData.server.players)) {
+                responsePayload.serverPlayers = statusData.server.players.map(p => ({
+                    name: p.playername,
+                    steamid: p.steamid,
+                    rank: p.rank,
+                    points: p.points
+                }));
+            }
 
             let playerObj = statusData.player;
             if (!playerObj && statusData.server.players && Array.isArray(statusData.server.players)) {
@@ -289,6 +299,7 @@ app.get('/api/player/:input', async (req, res) => {
                 responsePayload.zone = zone;
                 responsePayload.playerName = playerObj.playername;
                 responsePayload.timeConnected = playerObj.timeconnected;
+                responsePayload.country = null;
             } else {
                  responsePayload.zone = 0;
             }

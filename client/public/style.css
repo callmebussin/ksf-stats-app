@@ -229,6 +229,104 @@ body {
     font-weight: 400;
 }
 
+.player-info {
+    min-width: 0;
+    flex: 1;
+}
+
+#player-flag {
+    margin-right: 5px;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+.map-name-clickable {
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    transition: opacity 0.15s;
+}
+
+.map-name-clickable:hover {
+    opacity: 1 !important;
+}
+
+.map-name-clickable.copied {
+    color: #2ecc71 !important;
+    opacity: 1 !important;
+}
+
+.server-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+    font-size: 10px;
+    color: var(--text-color);
+    opacity: 0.5;
+}
+
+.server-name {
+    font-weight: 500;
+}
+
+.server-players-link {
+    cursor: pointer;
+    -webkit-app-region: no-drag;
+    position: relative;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    transition: opacity 0.15s;
+}
+
+.server-players-link:hover {
+    opacity: 1;
+}
+
+.players-modal {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 8px;
+    z-index: 100;
+    min-width: 180px;
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+    -webkit-app-region: no-drag;
+}
+
+.players-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.player-list-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--text-color);
+    padding: 3px 4px;
+    border-radius: 3px;
+}
+
+.player-list-item:hover {
+    background: rgba(255,255,255,0.05);
+}
+
+.player-list-item .player-list-name {
+    font-weight: 600;
+}
+
+.player-list-item .player-list-points {
+    opacity: 0.5;
+    font-size: 10px;
+}
+
 .header-right {
     margin-left: auto;
     display: flex;

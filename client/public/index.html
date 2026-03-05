@@ -11,8 +11,15 @@
         <div class="header">
             <div id="player-avatar" class="avatar"></div>
             <div class="player-info">
-                <h2 id="player-name">Player Name</h2>
-                <h3 id="map-name"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading map data...</h3>
+                <h2 id="player-name"><span id="player-flag"></span><span id="player-name-text">Player Name</span></h2>
+                <h3 id="map-name" class="map-name-clickable" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading map data...</h3>
+                <div id="server-info" class="server-info" style="display: none;">
+                    <span id="server-name" class="server-name"></span>
+                    <span id="server-players" class="server-players-link"></span>
+                    <div id="players-modal" class="players-modal" style="display: none;">
+                        <div id="players-list" class="players-list"></div>
+                    </div>
+                </div>
             </div>
             <div class="header-right">
                 <span id="status-indicator" class="status offline">OFFLINE</span>

@@ -29,10 +29,17 @@ let browsingZone = null;
 const ui = {
     avatar: document.getElementById('player-avatar'),
     playerName: document.getElementById('player-name'),
+    playerNameText: document.getElementById('player-name-text'),
+    playerFlag: document.getElementById('player-flag'),
     mapName: document.getElementById('map-name'),
     mapSpinner: document.getElementById('map-spinner'),
     statusIndicator: document.getElementById('status-indicator'),
     updateTimer: document.getElementById('update-timer'),
+    serverInfo: document.getElementById('server-info'),
+    serverName: document.getElementById('server-name'),
+    serverPlayers: document.getElementById('server-players'),
+    playersModal: document.getElementById('players-modal'),
+    playersList: document.getElementById('players-list'),
     
     time: document.getElementById('stat-time'),
     zone: document.getElementById('stat-zone'),
@@ -102,6 +109,27 @@ function broadcastBrowseState(zone) {
 
 ui.stageNavLeft.addEventListener('click', () => navigateZone(-1));
 ui.stageNavRight.addEventListener('click', () => navigateZone(1));
+
+ui.mapName.addEventListener('click', () => {
+    const mapText = ui.mapName.innerText;
+    if (!mapText || mapText.includes('loading')) return;
+    navigator.clipboard.writeText(mapText).then(() => {
+        ui.mapName.classList.add('copied');
+        const orig = ui.mapName.innerText;
+        ui.mapName.innerText = 'Copied!';
+        setTimeout(() => {
+            ui.mapName.innerText = orig;
+            ui.mapName.classList.remove('copied');
+        }, 1000);
+    }).catch(() => {});
+});
+
+ui.serverPlayers.addEventListener('mouseenter', () => {
+    ui.playersModal.style.display = 'block';
+});
+ui.serverPlayers.addEventListener('mouseleave', () => {
+    ui.playersModal.style.display = 'none';
+});
 
 function navigateZone(direction) {
     const zones = getSortedCachedZones();
@@ -282,7 +310,8 @@ function applyConfig() {
     }
 
     if (!currentConfig.steamId) {
-        ui.playerName.innerText = "No SteamID";
+        ui.playerNameText.innerText = "No SteamID";
+        ui.playerFlag.innerText = '';
         ui.statusIndicator.innerText = "SETUP";
         ui.statusIndicator.className = "status offline";
     }
@@ -794,6 +823,38 @@ async function fetchMapStats(map, baseData) {
     }
 }
 
+function countryToFlag(country) {
+    if (!country) return '';
+    const codes = {
+        'United States': 'US', 'Canada': 'CA', 'United Kingdom': 'GB', 'Germany': 'DE',
+        'France': 'FR', 'Sweden': 'SE', 'Norway': 'NO', 'Denmark': 'DK', 'Finland': 'FI',
+        'Netherlands': 'NL', 'Belgium': 'BE', 'Australia': 'AU', 'New Zealand': 'NZ',
+        'Brazil': 'BR', 'Russia': 'RU', 'Poland': 'PL', 'Spain': 'ES', 'Italy': 'IT',
+        'Portugal': 'PT', 'Japan': 'JP', 'South Korea': 'KR', 'China': 'CN', 'India': 'IN',
+        'Mexico': 'MX', 'Argentina': 'AR', 'Chile': 'CL', 'Colombia': 'CO', 'Peru': 'PE',
+        'Turkey': 'TR', 'Ukraine': 'UA', 'Czech Republic': 'CZ', 'Austria': 'AT',
+        'Switzerland': 'CH', 'Ireland': 'IE', 'Romania': 'RO', 'Hungary': 'HU',
+        'Slovakia': 'SK', 'Croatia': 'HR', 'Bulgaria': 'BG', 'Serbia': 'RS',
+        'Lithuania': 'LT', 'Latvia': 'LV', 'Estonia': 'EE', 'Slovenia': 'SI',
+        'Greece': 'GR', 'Israel': 'IL', 'South Africa': 'ZA', 'Thailand': 'TH',
+        'Philippines': 'PH', 'Malaysia': 'MY', 'Singapore': 'SG', 'Indonesia': 'ID',
+        'Vietnam': 'VN', 'Taiwan': 'TW', 'Hong Kong': 'HK', 'Iceland': 'IS',
+        'Luxembourg': 'LU', 'Malta': 'MT', 'Cyprus': 'CY', 'Georgia': 'GE',
+        'Kazakhstan': 'KZ', 'Belarus': 'BY', 'Moldova': 'MD', 'Albania': 'AL',
+        'North Macedonia': 'MK', 'Montenegro': 'ME', 'Bosnia and Herzegovina': 'BA',
+        'Uruguay': 'UY', 'Paraguay': 'PY', 'Ecuador': 'EC', 'Venezuela': 'VE',
+        'Costa Rica': 'CR', 'Panama': 'PA', 'Dominican Republic': 'DO',
+        'Puerto Rico': 'PR', 'Jamaica': 'JM', 'Trinidad and Tobago': 'TT',
+        'Egypt': 'EG', 'Morocco': 'MA', 'Nigeria': 'NG', 'Kenya': 'KE',
+        'Pakistan': 'PK', 'Bangladesh': 'BD', 'Sri Lanka': 'LK',
+        'United Arab Emirates': 'AE', 'Saudi Arabia': 'SA', 'Qatar': 'QA',
+        'Kuwait': 'KW', 'Bahrain': 'BH', 'Oman': 'OM', 'Jordan': 'JO', 'Lebanon': 'LB'
+    };
+    const code = codes[country];
+    if (!code) return '';
+    return String.fromCodePoint(...[...code].map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+}
+
 function updateUI(data) {
     if (data.avatarUrl) {
         ui.avatar.style.backgroundImage = `url('${data.avatarUrl}')`;
@@ -807,6 +868,25 @@ function updateUI(data) {
         
         ui.mapSpinner.style.display = 'none';
         ui.mapName.innerText = data.map || "Unknown Map";
+
+        if (data.serverName) {
+            const otherCount = (data.serverPlayers ? data.serverPlayers.length : 1) - 1;
+            ui.serverName.innerText = data.serverName;
+            ui.serverPlayers.innerText = otherCount > 0 ? `playing with ${otherCount} other${otherCount > 1 ? 's' : ''}` : 'playing solo';
+            ui.serverInfo.style.display = 'flex';
+
+            ui.playersList.innerHTML = '';
+            if (data.serverPlayers) {
+                for (const p of data.serverPlayers) {
+                    const item = document.createElement('div');
+                    item.className = 'player-list-item';
+                    item.innerHTML = `<span class="player-list-name">${p.name}</span><span class="player-list-points">${parseInt(p.points || 0).toLocaleString()} pts</span>`;
+                    ui.playersList.appendChild(item);
+                }
+            }
+        } else {
+            ui.serverInfo.style.display = 'none';
+        }
 
         if (data.map && data.map !== currentMap) {
             zoneCache.clear();
@@ -890,7 +970,11 @@ function updateUI(data) {
             }
         }
         
-        if (data.playerName) ui.playerName.innerText = data.playerName;
+        if (data.playerName) {
+            ui.playerNameText.innerText = data.playerName;
+            const country = data.country || (profileCache ? profileCache.country : null);
+            ui.playerFlag.innerText = countryToFlag(country);
+        }
 
     } else {
         ui.statusIndicator.innerText = "OFFLINE";
