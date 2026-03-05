@@ -833,13 +833,18 @@ function updateUI(data) {
             });
         }
 
-        const showMainMap = currentConfig.showMainMapStats && data.mainMapStats && data.zone !== 0;
+        const viewingZone = browsingZone !== null ? browsingZone : (zoneId !== null ? zoneId : 0);
+        let mainMapData = data.mainMapStats || null;
+        if (!mainMapData && viewingZone !== 0 && zoneCache.has(0)) {
+            mainMapData = zoneCache.get(0);
+        }
+        const showMainMap = currentConfig.showMainMapStats && mainMapData && viewingZone !== 0;
         if (showMainMap) {
             ui.mainMapSection.style.display = 'block';
             requestAnimationFrame(() => ui.mainMapSection.classList.add('expanded'));
             ui.sectionDivider.style.display = 'block';
             ui.sectionDivider.style.opacity = '1';
-            populateMainMapStats(data.mainMapStats);
+            populateMainMapStats(mainMapData);
         } else {
             ui.mainMapSection.classList.remove('expanded');
             setTimeout(() => {
