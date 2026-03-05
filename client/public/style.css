@@ -243,6 +243,7 @@ body {
 }
 
 .map-name-clickable {
+    display: inline;
     cursor: pointer;
     -webkit-app-region: no-drag;
     transition: opacity 0.15s;
