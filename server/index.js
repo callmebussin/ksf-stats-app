@@ -154,20 +154,20 @@ async function fetchKSFData(url) {
 
             // Detailed response logging
             console.log(`[KSF] <- ${response.status} ${duration}ms ${url}`);
-            console.log(`[KSF]    Content-Length: ${response.headers['content-length'] || 'unknown'}`);
+            console.log(`[KSF]    All Headers: ${JSON.stringify(response.headers)}`);
             console.log(`[KSF]    Response status field: ${response.data?.status || 'N/A'}`);
-            if (response.headers['x-ratelimit-remaining'] !== undefined) {
-                console.log(`[KSF]    Rate-Limit-Remaining: ${response.headers['x-ratelimit-remaining']}`);
-            }
-            if (response.headers['x-ratelimit-limit'] !== undefined) {
-                console.log(`[KSF]    Rate-Limit-Limit: ${response.headers['x-ratelimit-limit']}`);
-            }
-            if (response.headers['retry-after'] !== undefined) {
-                console.warn(`[KSF]    RETRY-AFTER: ${response.headers['retry-after']}`);
-            }
 
-            // Cache the response
-            ksfResponseCache.set(url, { data: response.data, timestamp: Date.now() });
+            // Only cache responses that have actual data (don't cache soft rate-limit "offline" responses)
+            const isOnlineStatusCall = url.includes('/onlinestatus');
+            const looksLikeRateLimit = isOnlineStatusCall && 
+                response.data?.data?.onlineStatus === 'offline' && 
+                response.data?.data?.player === null;
+            
+            if (looksLikeRateLimit) {
+                console.warn(`[KSF]    SUSPICIOUS: onlinestatus returned offline with null player - possible soft rate limit. NOT caching.`);
+            } else {
+                ksfResponseCache.set(url, { data: response.data, timestamp: Date.now() });
+            }
 
             return response.data;
         } catch (error) {
@@ -599,7 +599,45 @@ app.get('/api/config', (req, res) => {
     res.json({ steamId: "", refreshRate: 60, showMainMapStats: false, theme: {} });
 });
 
-// ── Diagnostic endpoint ──────────────────────────────────────────────────────
+// ── Diagnostic endpoints ─────────────────────────────────────────────────────
+// Raw KSF API test - hit this to see exactly what the server gets back
+app.get('/api/debug/ksf-raw/:steamid', async (req, res) => {
+    const { steamid } = req.params;
+    const gameType = req.query.game || serverConfig.defaultGame || 'css';
+    
+    try {
+        const resolved = await resolveSteamID(steamid);
+        if (!resolved) {
+            return res.status(404).json({ error: "Could not resolve SteamID" });
+        }
+        
+        const url = `${KSF_BASE_URL}/${gameType}/steamid/${resolved}/onlinestatus`;
+        console.log(`[DEBUG] Raw KSF test -> ${url}`);
+        
+        const response = await axios.get(url, {
+            headers: { 'discord-bot-token': KSF_API_TOKEN },
+            timeout: serverConfig.timeouts.ksfApiFetch
+        });
+        
+        res.json({
+            resolvedSteamId: resolved,
+            requestUrl: url,
+            httpStatus: response.status,
+            responseHeaders: response.headers,
+            responseBody: response.data,
+            serverIP: require('os').networkInterfaces(),
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({
+            error: error.message,
+            httpStatus: error.response?.status,
+            responseHeaders: error.response?.headers,
+            responseBody: error.response?.data
+        });
+    }
+});
+
 app.get('/api/debug/stats', (req, res) => {
     const elapsed = ((Date.now() - ksfCallStats.lastReset) / 1000).toFixed(0);
     res.json({
