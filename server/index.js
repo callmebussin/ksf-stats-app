@@ -156,9 +156,10 @@ function calculateGroup(rank, totalRanks, completions) {
     if (!rank || !totalRanks) return null;
     const r = parseInt(rank);
     const t = parseInt(totalRanks);
-    const c = parseInt(completions);
     if (isNaN(r) || isNaN(t) || t <= 0 || r <= 0) return null;
-    if (!isNaN(c) && c <= 0) return null;
+
+    const c = parseInt(completions);
+    if (isNaN(c) || c <= 0) return null;
 
     if (r === 1) return "WR";
     if (r <= 10) return "Top 10";
