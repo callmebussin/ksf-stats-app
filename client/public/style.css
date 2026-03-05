@@ -65,6 +65,12 @@ body {
     margin: 8px 0;
 }
 
+.card-divider {
+    border: none;
+    border-top: 1px solid rgba(255,255,255,0.08);
+    margin: 4px 0 8px;
+}
+
 .section-label {
     font-size: 12px;
     text-transform: uppercase;
@@ -318,8 +324,9 @@ body {
 }
 
 .zone-box:hover {
-    opacity: 0.8;
-    transform: scaleY(1.3);
+    outline: 2px solid var(--bg-color);
+    outline-offset: -2px;
+    z-index: 1;
 }
 
 .zone-box.completed {
@@ -335,8 +342,7 @@ body {
 }
 
 .zone-box.active {
-    border: 2px solid var(--bg-color);
-    box-sizing: border-box;
+    filter: brightness(0.6);
 }
 
 .zone-bar-tooltip {

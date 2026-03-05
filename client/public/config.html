@@ -291,9 +291,9 @@
                     <span>Rank / Points Card</span>
                     <div class="toggle"><input type="checkbox" id="show-rank-card" checked><span class="toggle-slider"></span></div>
                 </label>
-                <label class="toggle-row" for="show-profile">
+                <label class="toggle-row" for="show-profile-stats">
                     <span>Profile Stats</span>
-                    <div class="toggle"><input type="checkbox" id="show-profile" checked><span class="toggle-slider"></span></div>
+                    <div class="toggle"><input type="checkbox" id="show-profile-stats" checked><span class="toggle-slider"></span></div>
                 </label>
                 <label class="toggle-row" for="show-detailed-stats">
                     <span>Detailed Map Stats</span>
@@ -389,7 +389,7 @@
             horizontalLayout: document.getElementById('horizontal-layout'),
             showZoneBar: document.getElementById('show-zone-bar'),
             showRankCard: document.getElementById('show-rank-card'),
-            showProfile: document.getElementById('show-profile'),
+            showProfileStats: document.getElementById('show-profile-stats'),
             showDetailedStats: document.getElementById('show-detailed-stats'),
             obsUrlDisplay: document.getElementById('obs-url-display'),
             opacity: document.getElementById('opacity'),
@@ -413,7 +413,7 @@
             els.horizontalLayout.checked = config.horizontalLayout || false;
             els.showZoneBar.checked = config.showZoneBar !== false;
             els.showRankCard.checked = config.showRankCard !== false;
-            els.showProfile.checked = config.showProfile !== false;
+            els.showProfileStats.checked = config.showProfileStats !== false;
             els.showDetailedStats.checked = config.showDetailedStats !== false;
 
             els.opacity.value = config.opacity || 100;
@@ -455,7 +455,7 @@
                     horizontalLayout: els.horizontalLayout.checked,
                     showZoneBar: els.showZoneBar.checked,
                     showRankCard: els.showRankCard.checked,
-                    showProfile: els.showProfile.checked,
+                    showProfileStats: els.showProfileStats.checked,
                     showDetailedStats: els.showDetailedStats.checked,
                     opacity: parseInt(els.opacity.value),
                     theme: {
@@ -479,7 +479,7 @@
         els.horizontalLayout.addEventListener('change', autoSave);
         els.showZoneBar.addEventListener('change', autoSave);
         els.showRankCard.addEventListener('change', autoSave);
-        els.showProfile.addEventListener('change', autoSave);
+        els.showProfileStats.addEventListener('change', autoSave);
         els.showDetailedStats.addEventListener('change', autoSave);
         els.opacity.addEventListener('input', autoSave);
         els.colors.bgColor.addEventListener('input', autoSave);

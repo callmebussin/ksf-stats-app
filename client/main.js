@@ -18,7 +18,6 @@ let appConfig = {
     scale: 1.0,
     alwaysOnTop: true,
     showMainMapStats: false,
-    showProfile: true,
     showZoneBar: true,
     showRankCard: true,
     showProfileStats: true,

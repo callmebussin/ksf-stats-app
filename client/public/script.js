@@ -8,7 +8,6 @@ let currentConfig = {
     refreshRate: 60,
     opacity: 100,
     showMainMapStats: false,
-    showProfile: true,
     showZoneBar: true,
     showRankCard: true,
     showProfileStats: true,
@@ -232,7 +231,7 @@ if (ipcRenderer) {
         
         const steamIdChanged = currentConfig.steamId !== prev.steamId;
         const rateChanged = currentConfig.refreshRate !== prev.refreshRate;
-        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showProfile !== prev.showProfile || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats;
+        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats;
 
         if (!hasInitialized || steamIdChanged) {
             if (steamIdChanged) { profileCache = null; lastProfileFetch = 0; }
@@ -257,7 +256,7 @@ if (ipcRenderer) {
                 if (serverCfg.steamId) currentConfig.steamId = serverCfg.steamId;
                 if (serverCfg.refreshRate) currentConfig.refreshRate = serverCfg.refreshRate;
                 if (serverCfg.showMainMapStats) currentConfig.showMainMapStats = true;
-                if (serverCfg.showProfile !== undefined) currentConfig.showProfile = serverCfg.showProfile;
+                if (serverCfg.showProfileStats !== undefined) currentConfig.showProfileStats = serverCfg.showProfileStats;
                 if (serverCfg.showZoneBar !== undefined) currentConfig.showZoneBar = serverCfg.showZoneBar;
                 if (serverCfg.showRankCard !== undefined) currentConfig.showRankCard = serverCfg.showRankCard;
                 if (serverCfg.showProfileStats !== undefined) currentConfig.showProfileStats = serverCfg.showProfileStats;
@@ -317,14 +316,20 @@ function applyConfig() {
     const showProfileStats = currentConfig.showProfileStats !== false;
     const showAnyProfile = showRankCard || showProfileStats;
 
+    // Always set sub-element visibility
     const rankCard = document.getElementById('profile-rank-card');
     const profileStatsGrids = document.getElementById('profile-stats-grids');
     if (rankCard) rankCard.style.display = showRankCard ? '' : 'none';
     if (profileStatsGrids) profileStatsGrids.style.display = showProfileStats ? '' : 'none';
 
-    if (showAnyProfile && profileCache) {
-        populateProfile(profileCache);
-    } else if (!showAnyProfile) {
+    // Show/hide the wrapper section + divider
+    if (showAnyProfile) {
+        if (profileCache) {
+            ui.profileSection.style.display = 'block';
+            ui.profileDivider.style.display = 'block';
+            populateProfile(profileCache);
+        }
+    } else {
         hideProfile();
     }
 
@@ -371,8 +376,8 @@ function applyRemoteConfig(cfg) {
         currentConfig.horizontalLayout = cfg.horizontalLayout;
         changed = true;
     }
-    if (cfg.showProfile !== undefined && cfg.showProfile !== currentConfig.showProfile) {
-        currentConfig.showProfile = cfg.showProfile;
+    if (cfg.showProfileStats !== undefined && cfg.showProfileStats !== currentConfig.showProfileStats) {
+        currentConfig.showProfileStats = cfg.showProfileStats;
         changed = true;
     }
     if (cfg.showZoneBar !== undefined && cfg.showZoneBar !== currentConfig.showZoneBar) {
@@ -457,7 +462,7 @@ function updateFooterTimer() {
     if (diff > 0) {
         ui.updateTimer.innerText = `fetching data in ${diff}s`;
     } else {
-        ui.updateTimer.innerText = "fetching data...";
+        ui.updateTimer.innerHTML = '<span class="spinner" style="width:8px;height:8px;margin-right:4px;vertical-align:middle;"></span>updating';
     }
 }
 
@@ -719,17 +724,22 @@ function formatZone(zoneId, mapInfo) {
     return `Zone ${zid}`;
 }
 
-function setWrDisplay(wrTimeEl, wrDiffEl, playerTime, wrDiff) {
+function setWrDisplay(wrTimeEl, wrDiffEl, playerTime, wrDiff, wrTimeVal) {
     const time = parseFloat(playerTime);
     const diff = parseFloat(wrDiff);
 
-    if (!isNaN(time) && !isNaN(diff)) {
+    if (!isNaN(time) && !isNaN(diff) && time > 0) {
         const wrTime = time - diff;
         wrTimeEl.innerText = formatTime(wrTime.toString());
 
         const sign = diff > 0 ? "+" : "";
         wrDiffEl.innerText = `${sign}${formatTime(Math.abs(diff).toString())}`;
         wrDiffEl.style.color = (diff > 0) ? "var(--accent-color)" : (diff < 0 ? "#2ecc71" : "inherit");
+    } else if (wrTimeVal && parseFloat(wrTimeVal) > 0) {
+        // Player has no completion but we have the WR time
+        wrTimeEl.innerText = formatTime(wrTimeVal);
+        wrDiffEl.innerText = "";
+        wrDiffEl.style.color = "inherit";
     } else {
         wrTimeEl.innerText = "--:--.--";
         wrDiffEl.innerText = "-";
@@ -827,7 +837,7 @@ function populateMainMapStats(d) {
     ui.mainStatTime.innerText = formatTime(d.time);
     ui.mainStatRank.innerText = formatRank(d.rank, d.totalRanks, d.completions);
 
-    setWrDisplay(ui.mainStatWrTime, ui.mainStatWrDiff, d.time, d.wrDiff);
+    setWrDisplay(ui.mainStatWrTime, ui.mainStatWrDiff, d.time, d.wrDiff, d.wrTime);
 
     ui.mainStatCompletions.innerText = d.completions || "-";
     ui.mainStatAttempts.innerText = d.attempts || "-";
@@ -866,7 +876,7 @@ function populateZoneStats(data) {
 
     ui.zone.innerText = formatRank(data.rank, data.totalRanks, data.completions);
 
-    setWrDisplay(ui.wrTime, ui.wrDiff, data.time, data.wrDiff);
+    setWrDisplay(ui.wrTime, ui.wrDiff, data.time, data.wrDiff, data.wrTime);
     
     ui.completions.innerText = data.completions || "-";
     ui.attempts.innerText = data.attempts || "-";
@@ -885,7 +895,9 @@ let lastProfileFetch = 0;
 const PROFILE_CACHE_TTL = 300000;
 
 async function fetchProfile() {
-    if (!currentConfig.showProfile || !currentConfig.steamId) return;
+    // Skip fetch if both rank card and profile stats are off
+    const needsProfile = currentConfig.showRankCard !== false || currentConfig.showProfileStats !== false;
+    if (!needsProfile || !currentConfig.steamId) return;
 
     const now = Date.now();
     if (profileCache && (now - lastProfileFetch) < PROFILE_CACHE_TTL) {

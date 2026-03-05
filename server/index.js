@@ -335,6 +335,7 @@ function mapRecordData(rData) {
         totalRanks: rData.totalRanks,
         group: rData.group,
         wrDiff: rData.wrDiff,
+        wrTime: rData.wrTime || rData.wr_time || null,
         r2Diff: rData.r2Diff,
         avgVel: rData.avgvel,
         startVel: rData.startvel,
