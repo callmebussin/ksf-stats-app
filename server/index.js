@@ -63,6 +63,7 @@ const STEAM_API_KEY = process.env.STEAM_API_KEY || serverConfig.steamApiKey;
 
 const steamIdCache = new Map();
 const avatarCache = new Map();
+const countryCache = new Map();
 const STEAMID_CACHE_TTL = 3600000;
 const AVATAR_CACHE_TTL = 1800000;
 
@@ -222,6 +223,9 @@ function mapRecordData(rData) {
     
     if (rData.basicInfo) {
         payload.country = rData.basicInfo.country;
+        if (rData.basicInfo.steamID && rData.basicInfo.country) {
+            countryCache.set(rData.basicInfo.steamID, rData.basicInfo.country);
+        }
     }
     return payload;
 }
@@ -276,7 +280,8 @@ app.get('/api/player/:input', async (req, res) => {
                     name: p.playername,
                     steamid: p.steamid,
                     rank: p.rank,
-                    points: p.points
+                    points: p.points,
+                    country: countryCache.get(p.steamid) || null
                 }));
             }
 
@@ -420,6 +425,10 @@ app.get('/api/profile/:input', async (req, res) => {
         const surfRank = parseInt(d.SurfRank);
         const points = parseInt(d.playerPoints?.points);
         const rankTitle = calculateSurfRank(surfRank, points);
+
+        if (d.basicInfo?.steamID && d.basicInfo?.country) {
+            countryCache.set(d.basicInfo.steamID, d.basicInfo.country);
+        }
 
         res.json({
             name: d.basicInfo?.name,

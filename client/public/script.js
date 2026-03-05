@@ -123,11 +123,16 @@ ui.mapName.addEventListener('click', () => {
     }).catch(() => {});
 });
 
-ui.serverPlayers.addEventListener('mouseenter', () => {
-    ui.playersModal.style.display = 'block';
+ui.serverPlayers.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = ui.playersModal.style.display === 'block';
+    ui.playersModal.style.display = isOpen ? 'none' : 'block';
 });
-ui.serverPlayers.addEventListener('mouseleave', () => {
-    ui.playersModal.style.display = 'none';
+
+document.addEventListener('click', (e) => {
+    if (!ui.playersModal.contains(e.target) && e.target !== ui.serverPlayers) {
+        ui.playersModal.style.display = 'none';
+    }
 });
 
 function navigateZone(direction) {
