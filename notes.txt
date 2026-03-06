@@ -1,5 +1,6 @@
 add player dropdown list to view stats of other players in your lobby
 lobby leaderboard
+show the name of the server player is on
 comparison with other players
 
 100t and styles support
@@ -7,3 +8,6 @@ comparison with other players
 show country flag next to their name
 click the map name to copy to clipboard
 
+
+opacity doesnt update on stream
+wide mode doesn't update on stream

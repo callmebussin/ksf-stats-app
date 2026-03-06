@@ -598,7 +598,7 @@ app.get('/api/config', (req, res) => {
     } catch (e) {
         console.error("Failed to read overlay config:", e.message);
     }
-    res.json({ steamId: "", refreshRate: 60, showMainMapStats: false, showZoneBar: true, showRankCard: true, showProfileStats: true, showDetailedStats: true, showMapInfo: true, showPointsBreakdown: true, theme: {} });
+    res.json({ steamId: "", refreshRate: 60, showMainMapStats: false, showZoneBar: true, showRankCard: true, showProfileStats: true, showDetailedStats: true, showMapInfo: true, showPointsBreakdown: true, showHeader: true, showStagePanel: true, theme: {} });
 });
 
 // ── Diagnostic endpoints ─────────────────────────────────────────────────────

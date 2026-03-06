@@ -14,6 +14,8 @@ let currentConfig = {
     showDetailedStats: true,
     showMapInfo: true,
     showPointsBreakdown: true,
+    showHeader: true,
+    showStagePanel: true,
     autoFollowStage: true,
     horizontalLayout: false,
     theme: {},
@@ -39,7 +41,7 @@ const ui = {
     playerName: document.getElementById('player-name'),
     playerNameText: document.getElementById('player-name-text'),
     playerFlag: document.getElementById('player-flag'),
-    headerRankTitle: document.getElementById('header-rank-title'),
+    headerPoints: document.getElementById('header-points'),
     mapName: document.getElementById('map-name'),
     mapSpinner: document.getElementById('map-spinner'),
     mapTierValue: document.getElementById('map-tier-value'),
@@ -66,6 +68,8 @@ const ui = {
 
     profileSection: document.getElementById('profile-section'),
     profileDivider: document.getElementById('profile-divider'),
+    profileRankTitle: document.getElementById('profile-rank-title'),
+    profilePoints: document.getElementById('profile-points'),
     profileGlobalRank: document.getElementById('profile-global-rank'),
     profileCountryRank: document.getElementById('profile-country-rank'),
     profileCompletion: document.getElementById('profile-completion'),
@@ -78,7 +82,11 @@ const ui = {
     profileTop10s: document.getElementById('profile-top10s'),
     profileGroups: document.getElementById('profile-groups'),
     profilePlaytime: document.getElementById('profile-playtime'),
+    header: document.getElementById('header'),
+    cardsLayout: document.getElementById('cards-layout'),
     mapInfoCard: document.getElementById('map-info-card'),
+    completionsCard: document.getElementById('completions-card'),
+    recordsCard: document.getElementById('records-card'),
     pointsBreakdownCard: document.getElementById('points-breakdown-card'),
 
     mainMapSection: document.getElementById('main-map-section'),
@@ -236,7 +244,7 @@ if (ipcRenderer) {
         
         const steamIdChanged = currentConfig.steamId !== prev.steamId;
         const rateChanged = currentConfig.refreshRate !== prev.refreshRate;
-        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats || currentConfig.showMapInfo !== prev.showMapInfo || currentConfig.showPointsBreakdown !== prev.showPointsBreakdown;
+        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats || currentConfig.showMapInfo !== prev.showMapInfo || currentConfig.showPointsBreakdown !== prev.showPointsBreakdown || currentConfig.showHeader !== prev.showHeader || currentConfig.showStagePanel !== prev.showStagePanel;
 
         if (!hasInitialized || steamIdChanged) {
             if (steamIdChanged) { profileCache = null; lastProfileFetch = 0; }
@@ -268,6 +276,8 @@ if (ipcRenderer) {
                 if (serverCfg.showDetailedStats !== undefined) currentConfig.showDetailedStats = serverCfg.showDetailedStats;
                 if (serverCfg.showMapInfo !== undefined) currentConfig.showMapInfo = serverCfg.showMapInfo;
                 if (serverCfg.showPointsBreakdown !== undefined) currentConfig.showPointsBreakdown = serverCfg.showPointsBreakdown;
+                if (serverCfg.showHeader !== undefined) currentConfig.showHeader = serverCfg.showHeader;
+                if (serverCfg.showStagePanel !== undefined) currentConfig.showStagePanel = serverCfg.showStagePanel;
                 if (serverCfg.autoFollowStage !== undefined) currentConfig.autoFollowStage = serverCfg.autoFollowStage;
                 if (serverCfg.horizontalLayout !== undefined) currentConfig.horizontalLayout = serverCfg.horizontalLayout;
                 if (serverCfg.theme) currentConfig.theme = serverCfg.theme;
@@ -329,9 +339,9 @@ function applyConfig() {
 
     // Always set sub-element visibility
     const rankCard = document.getElementById('profile-rank-card');
-    const profileStatsGrids = document.getElementById('profile-stats-grids');
     if (rankCard) rankCard.style.display = showRankCard ? '' : 'none';
-    if (profileStatsGrids) profileStatsGrids.style.display = showProfileStats ? '' : 'none';
+    if (ui.completionsCard) ui.completionsCard.style.display = showProfileStats ? '' : 'none';
+    if (ui.recordsCard) ui.recordsCard.style.display = showProfileStats ? '' : 'none';
     if (ui.mapInfoCard) ui.mapInfoCard.style.display = showMapInfo ? '' : 'none';
     if (ui.pointsBreakdownCard) ui.pointsBreakdownCard.style.display = showPointsBreakdown ? '' : 'none';
 
@@ -363,6 +373,15 @@ function applyConfig() {
     for (const el of detailedEls) {
         el.style.display = currentConfig.showDetailedStats !== false ? '' : 'none';
     }
+
+    // ── Header visibility ───────────────────────────────────────
+    if (ui.header) ui.header.style.display = currentConfig.showHeader !== false ? '' : 'none';
+
+    // ── Stage panel (main map + stage/bonus sections) visibility ─
+    const showStage = currentConfig.showStagePanel !== false;
+    if (ui.cardsLayout) ui.cardsLayout.style.display = showStage ? '' : 'none';
+    // Hide the divider between profile and cards when stage panel is off
+    if (!showStage && ui.profileDivider) ui.profileDivider.style.display = 'none';
 
     if (!currentConfig.steamId) {
         ui.playerNameText.innerText = "No SteamID";
@@ -415,6 +434,14 @@ function applyRemoteConfig(cfg) {
     }
     if (cfg.showPointsBreakdown !== undefined && cfg.showPointsBreakdown !== currentConfig.showPointsBreakdown) {
         currentConfig.showPointsBreakdown = cfg.showPointsBreakdown;
+        changed = true;
+    }
+    if (cfg.showHeader !== undefined && cfg.showHeader !== currentConfig.showHeader) {
+        currentConfig.showHeader = cfg.showHeader;
+        changed = true;
+    }
+    if (cfg.showStagePanel !== undefined && cfg.showStagePanel !== currentConfig.showStagePanel) {
+        currentConfig.showStagePanel = cfg.showStagePanel;
         changed = true;
     }
     if (cfg.theme) {
@@ -611,6 +638,16 @@ function setTierBadge(tier) {
     }
     currentMapTier = t;
     ui.mapTierValue.innerText = t.toString();
+}
+
+function updateMapPlaytime() {
+    // Use zone 0 totalTime (map-specific playtime)
+    const zone0 = zoneCache.get(0);
+    if (zone0 && zone0.totalTime) {
+        ui.profilePlaytime.innerText = formatTotalTime(zone0.totalTime);
+    } else {
+        ui.profilePlaytime.innerText = "-";
+    }
 }
 
 function updateMapCompletionStatus(mapInfo) {
@@ -985,17 +1022,21 @@ function getRankTitleCss(rankTitle) {
 }
 
 function populateProfile(d) {
-    // Update header rank title (under username)
-    ui.headerRankTitle.innerText = d.rankTitle || "-";
-    ui.headerRankTitle.className = "header-rank-name";
-    const rankCss = getRankTitleCss(d.rankTitle);
-    if (rankCss) ui.headerRankTitle.classList.add(rankCss);
+    // Update header points (under username)
+    const totalPts = d.points?.points ? Math.round(d.points.points) : 0;
+    ui.headerPoints.innerText = totalPts > 0 ? `${totalPts.toLocaleString()} points` : "-";
 
-    // Rank card: Global Rank, Country Rank, PC%
+    // Rank title inside rank card (centered, larger)
+    const rankCss = getRankTitleCss(d.rankTitle);
+    ui.profileRankTitle.innerText = d.rankTitle || "-";
+    ui.profileRankTitle.className = "profile-rank-title";
+    if (rankCss) ui.profileRankTitle.classList.add(rankCss);
+
+    // Rank card: Points, Global Rank, Country Rank, PC%
+    ui.profilePoints.innerText = d.points?.points ? Math.round(d.points.points).toLocaleString() : "-";
     ui.profileGlobalRank.innerText = d.surfRank ? `#${d.surfRank}` : "-";
     ui.profileCountryRank.innerText = d.countryRank ? `#${d.countryRank}` : "-";
     ui.profileCompletion.innerText = d.percentCompletion ? `${d.percentCompletion}%` : "-";
-    ui.profilePlaytime.innerText = formatPlaytime(d.onlineTime);
 
     if (d.completedZones && d.totalZones) {
         ui.profileMaps.innerText = `${d.completedZones.map || 0}/${d.totalZones.TotalMaps || 0}`;
@@ -1014,9 +1055,9 @@ function populateProfile(d) {
 
     // Respect visibility toggles
     const rankCard = document.getElementById('profile-rank-card');
-    const profileStatsGrids = document.getElementById('profile-stats-grids');
     if (rankCard) rankCard.style.display = currentConfig.showRankCard !== false ? '' : 'none';
-    if (profileStatsGrids) profileStatsGrids.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
+    ui.completionsCard.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
+    ui.recordsCard.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
     ui.mapInfoCard.style.display = currentConfig.showMapInfo !== false ? '' : 'none';
     ui.pointsBreakdownCard.style.display = currentConfig.showPointsBreakdown !== false ? '' : 'none';
 
@@ -1029,7 +1070,7 @@ function populateProfile(d) {
 
 function populatePointsBreakdown(points) {
     if (!points) {
-        ui.pointsBreakdownCard.innerHTML = '';
+        ui.pointsBreakdownCard.innerHTML = '<div class="info-card-title">Points Breakdown</div>';
         return;
     }
 
@@ -1053,12 +1094,12 @@ function populatePointsBreakdown(points) {
     }
 
     if (items.length === 0) {
-        ui.pointsBreakdownCard.innerHTML = '';
+        ui.pointsBreakdownCard.innerHTML = '<div class="info-card-title">Points Breakdown</div>';
         ui.pointsBreakdownCard.style.display = 'none';
         return;
     }
 
-    ui.pointsBreakdownCard.innerHTML = items.map(item => `
+    ui.pointsBreakdownCard.innerHTML = '<div class="info-card-title">Points Breakdown</div>' + items.map(item => `
         <div class="info-card-stat">
             <span class="info-card-label">${item.label}</span>
             <span class="info-card-value">${Math.round(item.value).toLocaleString()}</span>
@@ -1105,6 +1146,8 @@ async function fetchMapStats(map, baseData) {
         updateMapCompletionStatus(baseData.mapInfo);
         // Set tier from mapstats response
         if (result.tier) setTierBadge(result.tier);
+        // Update map-specific playtime from zone 0 data
+        updateMapPlaytime();
         resizeOverlay();
     } catch (e) {}
     finally {
@@ -1285,6 +1328,9 @@ function updateUI(data) {
             });
         }
 
+        // Update map-specific playtime from zone 0 data
+        updateMapPlaytime();
+
         // ── Main Map panel logic ─────────────────────────────────────
         // Show the dedicated Main Map panel whenever the setting is on
         // and we have zone 0 data, regardless of current zone.
@@ -1362,6 +1408,7 @@ function updateUI(data) {
         ui.stageNav.style.display = 'none';
         ui.mapName.innerText = "Offline";
         ui.mapTierValue.innerText = '-';
+        ui.profilePlaytime.innerText = '-';
         ui.zoneBarContainer.style.display = 'none';
         ui.playingOnLabel.style.display = 'none';
         ui.serverInfo.style.display = 'none';

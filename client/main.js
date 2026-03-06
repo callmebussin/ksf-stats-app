@@ -24,6 +24,8 @@ let appConfig = {
     showDetailedStats: true,
     showMapInfo: true,
     showPointsBreakdown: true,
+    showHeader: true,
+    showStagePanel: true,
     autoFollowStage: true,
     horizontalLayout: false,
     zoneCompletedColor: "#2ecc71",

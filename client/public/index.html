@@ -8,11 +8,11 @@
 </head>
 <body class="overlay-mode">
     <div id="card" class="card">
-        <div class="header">
+        <div id="header" class="header">
             <div id="player-avatar" class="avatar"></div>
             <div class="player-info">
                 <h2 id="player-name"><img id="player-flag" class="player-flag" style="display:none"><span id="player-name-text">Player Name</span></h2>
-                <h3 id="header-rank-title" class="header-rank-name">-</h3>
+                <h3 id="header-points" class="header-points">-</h3>
             </div>
             <div class="header-right">
                 <span class="playing-on-label" id="playing-on-label" style="display: none;">Playing on</span>
@@ -26,17 +26,26 @@
 
         <div id="profile-section" class="profile-section" style="display: none;">
             <div id="profile-rank-card" class="profile-rank-header">
-                <div class="profile-rank-stat">
-                    <span class="profile-rank-stat-label">Global</span>
-                    <span class="profile-rank-stat-value" id="profile-global-rank">-</span>
+                <div class="profile-rank-title-row">
+                    <span class="profile-rank-title" id="profile-rank-title">-</span>
                 </div>
-                <div class="profile-rank-stat">
-                    <span class="profile-rank-stat-label">Country</span>
-                    <span class="profile-rank-stat-value" id="profile-country-rank">-</span>
-                </div>
-                <div class="profile-rank-stat">
-                    <span class="profile-rank-stat-label">PC%</span>
-                    <span class="profile-rank-stat-value" id="profile-completion">-</span>
+                <div class="profile-rank-stats-row">
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Points</span>
+                        <span class="profile-rank-stat-value" id="profile-points">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Global</span>
+                        <span class="profile-rank-stat-value" id="profile-global-rank">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Country</span>
+                        <span class="profile-rank-stat-value" id="profile-country-rank">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">PC%</span>
+                        <span class="profile-rank-stat-value" id="profile-completion">-</span>
+                    </div>
                 </div>
             </div>
 
@@ -49,56 +58,54 @@
                     <span class="info-card-label">Tier</span>
                     <span class="info-card-value" id="map-tier-value">-</span>
                 </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Playtime</span>
+                    <span class="info-card-value" id="profile-playtime">-</span>
+                </div>
+            </div>
+
+            <div id="completions-card" class="info-card" style="display: none;">
+                <div class="info-card-title">Completions</div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Maps</span>
+                    <span class="info-card-value" id="profile-maps">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Stages</span>
+                    <span class="info-card-value" id="profile-stages">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Bonuses</span>
+                    <span class="info-card-value" id="profile-bonuses">-</span>
+                </div>
+            </div>
+
+            <div id="records-card" class="info-card" style="display: none;">
+                <div class="info-card-title">Records</div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRs</span>
+                    <span class="info-card-value" id="profile-wrs">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRCPs</span>
+                    <span class="info-card-value" id="profile-wrcps">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRBs</span>
+                    <span class="info-card-value" id="profile-wrbs">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Top 10</span>
+                    <span class="info-card-value" id="profile-top10s">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Groups</span>
+                    <span class="info-card-value" id="profile-groups">-</span>
+                </div>
             </div>
 
             <div id="points-breakdown-card" class="info-card" style="display: none;">
-            </div>
-
-            <div id="profile-stats-grids">
-                <div class="profile-grid">
-                    <div class="profile-stat">
-                        <span class="label">Playtime</span>
-                        <span class="value" id="profile-playtime">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">Maps</span>
-                        <span class="value" id="profile-maps">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">Stages</span>
-                        <span class="value" id="profile-stages">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">Bonuses</span>
-                        <span class="value" id="profile-bonuses">-</span>
-                    </div>
-                </div>
-
-                <div class="profile-grid">
-                    <div class="profile-stat">
-                        <span class="label">WRs</span>
-                        <span class="value" id="profile-wrs">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">WRCPs</span>
-                        <span class="value" id="profile-wrcps">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">WRBs</span>
-                        <span class="value" id="profile-wrbs">-</span>
-                    </div>
-                    <div class="profile-stat">
-                        <span class="label">Groups</span>
-                        <span class="value" id="profile-groups">-</span>
-                    </div>
-                </div>
-
-                <div class="profile-grid">
-                    <div class="profile-stat">
-                        <span class="label">Top 10s</span>
-                        <span class="value" id="profile-top10s">-</span>
-                    </div>
-                </div>
+                <div class="info-card-title">Points Breakdown</div>
             </div>
         </div>
 

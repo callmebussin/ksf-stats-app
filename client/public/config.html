@@ -274,6 +274,10 @@
 
             <div class="panel" style="flex: 1;">
                 <div class="panel-title">Display</div>
+                <label class="toggle-row" for="show-header">
+                    <span>Header</span>
+                    <div class="toggle"><input type="checkbox" id="show-header" checked><span class="toggle-slider"></span></div>
+                </label>
                 <label class="toggle-row" for="show-zone-bar">
                     <span>Zone Completion Bar</span>
                     <div class="toggle"><input type="checkbox" id="show-zone-bar" checked><span class="toggle-slider"></span></div>
@@ -297,6 +301,10 @@
                 <label class="toggle-row" for="show-points-breakdown">
                     <span>Points Breakdown Card</span>
                     <div class="toggle"><input type="checkbox" id="show-points-breakdown" checked><span class="toggle-slider"></span></div>
+                </label>
+                <label class="toggle-row" for="show-stage-panel">
+                    <span>Map PB &amp; Rank Section</span>
+                    <div class="toggle"><input type="checkbox" id="show-stage-panel" checked><span class="toggle-slider"></span></div>
                 </label>
                 <label class="toggle-row" for="show-main-map-stats">
                     <span>Show Map Stats Separately</span>
@@ -393,12 +401,14 @@
             showMainMapStats: document.getElementById('show-main-map-stats'),
             autoFollowStage: document.getElementById('auto-follow-stage'),
             horizontalLayout: document.getElementById('horizontal-layout'),
+            showHeader: document.getElementById('show-header'),
             showZoneBar: document.getElementById('show-zone-bar'),
             showRankCard: document.getElementById('show-rank-card'),
             showProfileStats: document.getElementById('show-profile-stats'),
             showDetailedStats: document.getElementById('show-detailed-stats'),
             showMapInfo: document.getElementById('show-map-info'),
             showPointsBreakdown: document.getElementById('show-points-breakdown'),
+            showStagePanel: document.getElementById('show-stage-panel'),
             obsUrlDisplay: document.getElementById('obs-url-display'),
             opacity: document.getElementById('opacity'),
             opacityVal: document.getElementById('opacity-val'),
@@ -421,12 +431,14 @@
             els.showMainMapStats.checked = config.showMainMapStats || false;
             els.autoFollowStage.checked = config.autoFollowStage !== false;
             els.horizontalLayout.checked = config.horizontalLayout || false;
+            els.showHeader.checked = config.showHeader !== false;
             els.showZoneBar.checked = config.showZoneBar !== false;
             els.showRankCard.checked = config.showRankCard !== false;
             els.showProfileStats.checked = config.showProfileStats !== false;
             els.showDetailedStats.checked = config.showDetailedStats !== false;
             els.showMapInfo.checked = config.showMapInfo !== false;
             els.showPointsBreakdown.checked = config.showPointsBreakdown !== false;
+            els.showStagePanel.checked = config.showStagePanel !== false;
 
             els.opacity.value = config.opacity || 100;
             els.opacityVal.innerText = els.opacity.value + '%';
@@ -467,12 +479,14 @@
                     showMainMapStats: els.showMainMapStats.checked,
                     autoFollowStage: els.autoFollowStage.checked,
                     horizontalLayout: els.horizontalLayout.checked,
+                    showHeader: els.showHeader.checked,
                     showZoneBar: els.showZoneBar.checked,
                     showRankCard: els.showRankCard.checked,
                     showProfileStats: els.showProfileStats.checked,
                     showDetailedStats: els.showDetailedStats.checked,
                     showMapInfo: els.showMapInfo.checked,
                     showPointsBreakdown: els.showPointsBreakdown.checked,
+                    showStagePanel: els.showStagePanel.checked,
                     opacity: parseInt(els.opacity.value),
                     zoneCompletedColor: els.zoneCompletedColor.value,
                     zoneNotCompletedColor: els.zoneNotCompletedColor.value,
@@ -495,12 +509,14 @@
         els.showMainMapStats.addEventListener('change', autoSave);
         els.autoFollowStage.addEventListener('change', autoSave);
         els.horizontalLayout.addEventListener('change', autoSave);
+        els.showHeader.addEventListener('change', autoSave);
         els.showZoneBar.addEventListener('change', autoSave);
         els.showRankCard.addEventListener('change', autoSave);
         els.showProfileStats.addEventListener('change', autoSave);
         els.showDetailedStats.addEventListener('change', autoSave);
         els.showMapInfo.addEventListener('change', autoSave);
         els.showPointsBreakdown.addEventListener('change', autoSave);
+        els.showStagePanel.addEventListener('change', autoSave);
         els.opacity.addEventListener('input', autoSave);
         els.colors.bgColor.addEventListener('input', autoSave);
         els.colors.textColor.addEventListener('input', autoSave);
