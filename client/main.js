@@ -179,6 +179,19 @@ ipcMain.on('get-config', (event) => {
     event.reply('config-updated', appConfig);
 });
 
+ipcMain.on('save-refresh-time', (event, timestamp) => {
+    // Persist lastRefreshTime to config without broadcasting config-updated
+    // (avoids triggering unnecessary re-renders / fetch cycles)
+    appConfig.lastRefreshTime = timestamp;
+    try {
+        fs.writeFileSync(CONFIG_PATH, JSON.stringify(appConfig, null, 2));
+    } catch (e) {}
+});
+
+ipcMain.on('get-refresh-time', (event) => {
+    event.returnValue = appConfig.lastRefreshTime || 0;
+});
+
 ipcMain.on('open-external', (event, url) => {
     shell.openExternal(url);
 });

@@ -88,7 +88,12 @@ const limiter = rateLimit({
     max: serverConfig.rateLimit.maxRequests,
     message: { error: "Too many requests, please try again later." }
 });
-app.use('/api', limiter);
+// Only rate-limit the heavy KSF-proxied endpoints, not lightweight local sync endpoints
+// like /api/browse (polled every 1.5s by OBS) and /api/config
+app.use('/api', (req, res, next) => {
+    if (req.path === '/browse' || req.path === '/config') return next();
+    return limiter(req, res, next);
+});
 
 const CLIENT_PUBLIC_PATH = path.join(__dirname, '..', 'client', 'public');
 app.use(express.static(CLIENT_PUBLIC_PATH, { etag: false, lastModified: false, maxAge: 0 }));
@@ -191,6 +196,30 @@ async function fetchKSFData(url) {
     return promise;
 }
 
+// ── Player API response cache ───────────────────────────────────────────────
+// Caches the full /api/player response so switching between players on the
+// same server is instant (no KSF API calls needed).
+const playerResponseCache = new Map();
+const PLAYER_CACHE_TTL = KSF_CACHE_TTL; // same as KSF cache TTL
+
+function getPlayerCacheKey(steamid, gameType, surfType) {
+    return `${steamid}:${gameType}:${surfType}`;
+}
+
+function cachePlayerResponse(steamid, gameType, surfType, payload) {
+    const key = getPlayerCacheKey(steamid, gameType, surfType);
+    playerResponseCache.set(key, { data: payload, timestamp: Date.now() });
+}
+
+function getCachedPlayerResponse(steamid, gameType, surfType) {
+    const key = getPlayerCacheKey(steamid, gameType, surfType);
+    const cached = playerResponseCache.get(key);
+    if (cached && (Date.now() - cached.timestamp) < PLAYER_CACHE_TTL) {
+        return cached.data;
+    }
+    return null;
+}
+
 // Periodically clean expired cache entries
 setInterval(() => {
     const now = Date.now();
@@ -201,8 +230,14 @@ setInterval(() => {
             cleaned++;
         }
     }
+    for (const [key, entry] of playerResponseCache) {
+        if (now - entry.timestamp > PLAYER_CACHE_TTL * 2) {
+            playerResponseCache.delete(key);
+            cleaned++;
+        }
+    }
     if (cleaned > 0) {
-        console.log(`[KSF CACHE] Cleaned ${cleaned} expired entries. ${ksfResponseCache.size} remaining.`);
+        console.log(`[CACHE] Cleaned ${cleaned} expired entries. KSF=${ksfResponseCache.size} Player=${playerResponseCache.size}`);
     }
 }, 60000);
 
@@ -369,6 +404,20 @@ app.get('/api/player/:input', async (req, res) => {
              return res.status(404).json({ error: "Could not resolve SteamID" });
         }
 
+        // Check player response cache first (instant response for recently-fetched players)
+        // Also check the alternate gameType since auto-detection may have stored under a different key
+        const cachedResponse = getCachedPlayerResponse(steamid, gameType, surfType);
+        if (cachedResponse) {
+            console.log(`[PLAYER] CACHE HIT for ${steamid} (${gameType}/${surfType})`);
+            return res.json(cachedResponse);
+        }
+        const altGameTypeForCache = gameType === 'css' ? 'css100t' : 'css';
+        const altCachedResponse = getCachedPlayerResponse(steamid, altGameTypeForCache, surfType);
+        if (altCachedResponse) {
+            console.log(`[PLAYER] CACHE HIT (alt gameType) for ${steamid} (${altGameTypeForCache}/${surfType})`);
+            return res.json(altCachedResponse);
+        }
+
         // Auto-detect: try the requested gameType first
         let detectedGameType = gameType;
         const statusUrl = `${KSF_BASE_URL}/${gameType}/steamid/${steamid}/onlinestatus`;
@@ -471,6 +520,40 @@ app.get('/api/player/:input', async (req, res) => {
                      responsePayload.mainMapStats = mapRecordData(mainMapResponse.data);
                  }
             }
+
+            // Pre-cache online status for all players on this server.
+            // When the user clicks another player from the lobby list, their
+            // /onlinestatus KSF call will be a cache hit instead of a fresh API call.
+            if (statusData.server.players && Array.isArray(statusData.server.players)) {
+                for (const p of statusData.server.players) {
+                    if (p.steamid && p.steamid !== steamid) {
+                        // Build a synthetic onlinestatus response for each co-player.
+                        // The server info is the same; only the player field differs.
+                        const syntheticResponse = {
+                            status: 'OK',
+                            data: {
+                                onlineStatus: 'online',
+                                player: p,
+                                server: statusData.server
+                            }
+                        };
+                        const pStatusUrl = `${KSF_BASE_URL}/${detectedGameType}/steamid/${p.steamid}/onlinestatus`;
+                        // Only populate if not already cached (don't overwrite fresher data)
+                        const existing = ksfResponseCache.get(pStatusUrl);
+                        if (!existing || (Date.now() - existing.timestamp) > KSF_CACHE_TTL) {
+                            ksfResponseCache.set(pStatusUrl, { data: syntheticResponse, timestamp: Date.now() });
+                            console.log(`[PLAYER] Pre-cached onlinestatus for co-player ${p.playername} (${p.steamid})`);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Cache this player's full response under both the requested and detected gameType
+        // so lookups for either key hit the cache
+        cachePlayerResponse(steamid, detectedGameType, surfType, responsePayload);
+        if (detectedGameType !== gameType) {
+            cachePlayerResponse(steamid, gameType, surfType, responsePayload);
         }
 
         res.json(responsePayload);

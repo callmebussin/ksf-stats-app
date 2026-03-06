@@ -191,6 +191,17 @@ body {
     color: var(--text-color);
 }
 
+.player-info h2.viewing-other {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-style: dotted;
+    text-underline-offset: 3px;
+}
+
+.player-info h2.viewing-other:hover {
+    opacity: 0.8;
+}
+
 /* player-info h3 removed — replaced by .header-rank-label */
 
 /* header-points class removed, replaced by header-rank-label */

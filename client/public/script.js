@@ -30,18 +30,26 @@ let currentConfig = {
 
 let refreshInterval = null;
 let timerInterval = null;
+let deferredFetchTimeout = null; // Track deferred fetch from startPolling cooldown
 let lastRefreshTime = 0;
 let isUpdating = false;
 let hasInitialized = false;
 let currentFetchController = null; // AbortController for in-flight fetches
+let viewingOtherPlayer = null; // When set, we're viewing another player's stats (not our own)
 
-// Persist lastRefreshTime across reloads to prevent API spam on Ctrl+R
+// Persist lastRefreshTime across reloads AND full app restarts.
+// Uses both localStorage (fast, survives Ctrl+R) and Electron IPC (survives full restart).
 function saveLastRefreshTime(timestamp) {
     lastRefreshTime = timestamp;
     try { localStorage.setItem('ksf_lastRefreshTime', timestamp.toString()); } catch (e) {}
+    // Persist to Electron config file for full app restart survival
+    if (ipcRenderer && timestamp > 0) {
+        ipcRenderer.send('save-refresh-time', timestamp);
+    }
 }
 
 function loadLastRefreshTime() {
+    // Try localStorage first (fastest)
     try {
         const stored = localStorage.getItem('ksf_lastRefreshTime');
         if (stored) {
@@ -52,6 +60,16 @@ function loadLastRefreshTime() {
             }
         }
     } catch (e) {}
+    // Fall back to Electron config (survives full app restarts)
+    if (ipcRenderer) {
+        try {
+            const ts = ipcRenderer.sendSync('get-refresh-time');
+            if (ts && ts > 0) {
+                lastRefreshTime = ts;
+                return ts;
+            }
+        } catch (e) {}
+    }
     return 0;
 }
 
@@ -532,6 +550,38 @@ document.addEventListener('click', (e) => {
     }
 });
 
+// Click player name to switch back to own stats when viewing another player
+ui.playerName.addEventListener('click', () => {
+    if (!viewingOtherPlayer) return; // Not viewing someone else — nothing to do
+
+    // Abort any in-flight requests
+    if (currentFetchController) {
+        currentFetchController.abort();
+        currentFetchController = null;
+    }
+    isUpdating = false;
+    mapStatsFetching = null;
+
+    // Save current viewed player's state
+    savePillSnapshot();
+
+    // Restore our own steamId
+    currentConfig.steamId = viewingOtherPlayer;
+    viewingOtherPlayer = null;
+
+    profileCache = null;
+    lastProfileFetch = 0;
+    zoneCache.clear();
+    currentMap = null;
+    currentZone = null;
+    browsingZone = null;
+    displayedStageZone = null;
+    saveLastRefreshTime(0);
+
+    // Restart polling for our own stats
+    startPolling(true);
+});
+
 function navigateZone(direction) {
     const zones = getSortedCachedZones();
     if (zones.length === 0) return;
@@ -701,19 +751,36 @@ if (ipcRenderer) {
     ipcRenderer.on('config-updated', (event, config) => {
         const prev = { ...currentConfig };
 
-        // Save current player's pill snapshot before steamId changes
-        if (config.steamId && config.steamId !== prev.steamId) {
+        // If we're viewing another player's stats, preserve the viewed steamId
+        // instead of letting the persisted config overwrite it.
+        // Only allow steamId changes from config when:
+        //   1. We're NOT viewing another player (viewingOtherPlayer is null), OR
+        //   2. The config steamId actually changed (user changed their own steamId in settings)
+        const persistedSteamIdChanged = config.steamId && config.steamId !== prev.steamId && !viewingOtherPlayer;
+        const ownSteamIdChanged = config.steamId && viewingOtherPlayer && config.steamId !== viewingOtherPlayer;
+
+        if (persistedSteamIdChanged) {
             savePillSnapshot();
         }
 
+        // Preserve the current steamId when viewing another player
+        const preservedSteamId = viewingOtherPlayer ? currentConfig.steamId : null;
         currentConfig = { ...currentConfig, ...config };
+        if (preservedSteamId) {
+            currentConfig.steamId = preservedSteamId;
+        }
+        // But always track the "own" steamId from config for switching back
+        if (config.steamId) {
+            viewingOtherPlayer = viewingOtherPlayer || null; // keep current viewing state
+        }
+
         applyConfig();
 
         // Always push config to server so OBS web view stays in sync
         // (fires on initial load AND on every subsequent change)
         broadcastConfigToServer();
         
-        const steamIdChanged = currentConfig.steamId !== prev.steamId;
+        const steamIdChanged = persistedSteamIdChanged || ownSteamIdChanged;
         const rateChanged = currentConfig.refreshRate !== prev.refreshRate;
         const gameTypeChanged = currentConfig.gameType !== prev.gameType || currentConfig.surfType !== prev.surfType;
         const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats || currentConfig.showMapInfo !== prev.showMapInfo || currentConfig.showMapImage !== prev.showMapImage || currentConfig.showPointsBreakdown !== prev.showPointsBreakdown || currentConfig.showHeader !== prev.showHeader || currentConfig.showPillToggles !== prev.showPillToggles || currentConfig.showStagePanel !== prev.showStagePanel || currentConfig.showFooter !== prev.showFooter;
@@ -722,6 +789,7 @@ if (ipcRenderer) {
 
         if (!hasInitialized || steamIdChanged) {
             if (steamIdChanged) {
+                viewingOtherPlayer = null; // Reset viewing state on real steamId change
                 profileCache = null;
                 lastProfileFetch = 0;
                 zoneCache.clear();
@@ -1029,6 +1097,7 @@ function startPolling(forceImmediate = false) {
     if (refreshInterval) clearInterval(refreshInterval);
     if (timerInterval) clearInterval(timerInterval);
     if (browseInterval) clearInterval(browseInterval);
+    if (deferredFetchTimeout) { clearTimeout(deferredFetchTimeout); deferredFetchTimeout = null; }
     
     if (!currentConfig.steamId) return;
 
@@ -1055,7 +1124,8 @@ function startPolling(forceImmediate = false) {
             // Still within cooldown — schedule fetch for remaining time instead of fetching now
             const remaining = rateMs - elapsed;
             console.log(`[POLL] Reload detected. Waiting ${Math.ceil(remaining / 1000)}s before next fetch.`);
-            setTimeout(() => {
+            deferredFetchTimeout = setTimeout(() => {
+                deferredFetchTimeout = null;
                 fetchStats();
                 // Start the regular interval aligned to this deferred fetch
                 if (refreshInterval) clearInterval(refreshInterval);
@@ -1143,6 +1213,8 @@ async function fetchStats() {
 
     isUpdating = true;
     
+    // Separate network fetch from UI update to avoid UI errors showing as "NET ERROR"
+    let data;
     try {
         const baseUrl = getBaseUrl();
         const response = await fetch(`${baseUrl}/api/player/${encodeURIComponent(currentConfig.steamId)}?${apiQuery()}`, { signal });
@@ -1151,11 +1223,33 @@ async function fetchStats() {
             throw new Error(`Server returned ${response.status}`);
         }
         
-        const data = await response.json();
+        data = await response.json();
+    } catch (error) {
+        if (error.name === 'AbortError') {
+            // Fetch was cancelled by a pill switch — not an error, don't touch isUpdating
+            // (the new fetch or pill switch handler already reset it)
+            return;
+        }
+        console.error("Fetch failed:", error);
+        // Only show error if this fetch is still the current one (not superseded)
+        if (currentFetchController === fetchId) {
+            ui.statusIndicator.innerHTML = '<span class="status-dot"></span>NET ERROR';
+            ui.statusIndicator.className = "status-badge offline";
+            // Don't call showLoadingState() — preserve existing data on transient errors
+            // Just update the status badge. Data will refresh on next poll cycle.
+            saveLastRefreshTime(Date.now());
+            isUpdating = false;
+        }
+        return;
+    }
 
-        // If this fetch was superseded by another, discard results
-        if (currentFetchController !== fetchId) return;
+    // If this fetch was superseded by another, discard results
+    if (currentFetchController !== fetchId) {
+        return;
+    }
 
+    // UI update phase — errors here are JS bugs, not network issues
+    try {
         // Auto-detect gameType from server response
         if (data.gameType && data.gameType !== currentConfig.gameType) {
             currentConfig.gameType = data.gameType;
@@ -1175,6 +1269,7 @@ async function fetchStats() {
 
         if (!ipcRenderer) {
             try {
+                const baseUrl = getBaseUrl();
                 const browseResp = await fetch(`${baseUrl}/api/browse`);
                 if (browseResp.ok) {
                     const browseData = await browseResp.json();
@@ -1182,22 +1277,10 @@ async function fetchStats() {
                 }
             } catch (e) {}
         }
-        
-    } catch (error) {
-        if (error.name === 'AbortError') {
-            // Fetch was cancelled by a pill switch — not an error, don't touch isUpdating
-            // (the new fetch or pill switch handler already reset it)
-            return;
-        }
-        console.error("Fetch failed:", error);
-        // Only show error if this fetch is still the current one (not superseded)
-        if (currentFetchController === fetchId) {
-            ui.statusIndicator.innerHTML = '<span class="status-dot"></span>NET ERROR';
-            ui.statusIndicator.className = "status-badge offline";
-            // Don't call showLoadingState() — preserve existing data on transient errors
-            // Just update the status badge. Data will refresh on next poll cycle.
-            saveLastRefreshTime(Date.now());
-        }
+    } catch (uiError) {
+        // Log UI errors for debugging but don't show "NET ERROR" — the data fetched fine
+        console.error("UI update error:", uiError);
+        saveLastRefreshTime(Date.now());
     } finally {
         // Only clear isUpdating if this fetch is still the current one
         if (currentFetchController === fetchId) {
@@ -1786,11 +1869,18 @@ async function fetchMapStats(map, baseData) {
 
     try {
         const resp = await fetch(`${getBaseUrl()}/api/mapstats/${encodeURIComponent(currentConfig.steamId)}/${encodeURIComponent(map)}?${apiQuery()}`);
-        if (!resp.ok) return;
+        if (!resp.ok) {
+            console.error(`[MAPSTATS] Failed: ${resp.status} for ${map}`);
+            return;
+        }
         const result = await resp.json();
 
-        if (!result.zones || currentMap !== map) return;
+        if (!result.zones || currentMap !== map) {
+            console.warn(`[MAPSTATS] Discarded: zones=${!!result.zones} currentMap=${currentMap} requestedMap=${map}`);
+            return;
+        }
 
+        let loaded = 0;
         for (const [zoneIdStr, zoneData] of Object.entries(result.zones)) {
             const zoneId = parseInt(zoneIdStr);
             if (isNaN(zoneId)) continue;
@@ -1805,7 +1895,9 @@ async function fetchMapStats(map, baseData) {
                 steamId64: baseData.steamId64,
                 status: baseData.status
             });
+            loaded++;
         }
+        console.log(`[MAPSTATS] Loaded ${loaded} zones for ${map} (total cached: ${zoneCache.size})`);
 
         updateNavButtons();
         updateMapCompletionStatus(baseData.mapInfo);
@@ -1815,7 +1907,9 @@ async function fetchMapStats(map, baseData) {
         updateMapPlaytime();
         saveLocalCache();
         resizeOverlay();
-    } catch (e) {}
+    } catch (e) {
+        console.error(`[MAPSTATS] Error fetching ${map}:`, e);
+    }
     finally {
         if (mapStatsFetching === map) mapStatsFetching = null;
     }
@@ -2010,8 +2104,15 @@ function updateUI(data) {
                         // Save current player's state before switching
                         savePillSnapshot();
 
-                        // Switch to the selected player
+                        // Track whether we're viewing another player or switching back to our own.
+                        // viewingOtherPlayer stores our "own" steamId when viewing someone else.
+                        if (!viewingOtherPlayer) {
+                            // We're currently viewing our own profile — remember our steamId
+                            viewingOtherPlayer = currentConfig.steamId;
+                        }
+                        
                         currentConfig.steamId = p.steamid;
+
                         profileCache = null;
                         lastProfileFetch = 0;
                         zoneCache.clear();
@@ -2038,6 +2139,7 @@ function updateUI(data) {
         }
 
         if (data.map && data.map !== currentMap) {
+            console.log(`[UI] Map changed: ${currentMap} -> ${data.map}, fetching map stats`);
             zoneCache.clear();
             browsingZone = null;
             displayedStageZone = null;
@@ -2127,6 +2229,15 @@ function updateUI(data) {
             setPlayerFlag(country);
         }
 
+        // Visual indicator when viewing another player's stats
+        if (viewingOtherPlayer) {
+            ui.playerName.classList.add('viewing-other');
+            ui.playerName.title = 'Click to return to your stats';
+        } else {
+            ui.playerName.classList.remove('viewing-other');
+            ui.playerName.title = '';
+        }
+
     } else {
         ui.statusIndicator.innerHTML = '<span class="status-dot"></span>OFFLINE';
         ui.statusIndicator.className = "status-badge offline";
@@ -2153,6 +2264,15 @@ function updateUI(data) {
             ui.playerNameText.innerText = data.playerName;
         } else if (data.rawStatus?.name) {
             ui.playerNameText.innerText = data.rawStatus.name;
+        }
+
+        // Visual indicator when viewing another player's stats (offline case)
+        if (viewingOtherPlayer) {
+            ui.playerName.classList.add('viewing-other');
+            ui.playerName.title = 'Click to return to your stats';
+        } else {
+            ui.playerName.classList.remove('viewing-other');
+            ui.playerName.title = '';
         }
     }
 
