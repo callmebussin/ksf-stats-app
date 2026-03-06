@@ -647,6 +647,13 @@ function getNumberFormat(text) {
 }
 
 function formatAnimatedNumber(value, template, format) {
+    // Check if the template uses commas for thousands separators
+    const useCommas = /\d,\d{3}/.test(template);
+
+    function intStr(v) {
+        return useCommas ? Math.round(v).toLocaleString() : Math.round(v).toString();
+    }
+
     switch (format) {
         case 'time': {
             const mins = Math.floor(value / 60);
@@ -654,6 +661,21 @@ function formatAnimatedNumber(value, template, format) {
             const ms = Math.floor((value % 1) * 1000);
             return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}.${ms.toString().padStart(3,'0')}`;
         }
+        case 'rank': {
+            const parts = template.match(/^(-?[\d,]+)\/([\d,]+)$/);
+            const total = parts ? parts[2] : '';
+            return `${intStr(value)}/${total}`;
+        }
+        case 'hash':
+            return `#${intStr(value)}`;
+        case 'pct':
+            return `${value.toFixed(2)}%`;
+        case 'plain':
+        default:
+            if (template.includes('.')) return value.toFixed((template.split('.')[1] || '').length);
+            return intStr(value);
+    }
+}
         case 'rank': {
             const parts = template.match(/^(-?\d[\d,]*)\s*\/\s*(-?\d[\d,]*)$/);
             const total = parts ? parts[2] : '';
@@ -1212,6 +1234,13 @@ function formatTime(secondsStr) {
     return `${pad(minutes, 2)}:${pad(seconds, 2)}.${pad(milliseconds, 3)}`;
 }
 
+function formatTimeDiff(secondsStr) {
+    const formatted = formatTime(secondsStr);
+    if (formatted === "--:--.--") return formatted;
+    // Strip leading "00:" for diffs under 60 seconds
+    return formatted.replace(/^00:/, '');
+}
+
 function formatTotalTime(secondsStr) {
     if (!secondsStr) return "-";
     const totalSeconds = parseFloat(secondsStr);
@@ -1420,7 +1449,7 @@ function setWrDisplay(wrTimeEl, wrDiffEl, playerTime, wrDiff, wrTimeVal) {
         animateValue(wrTimeEl, formatTime(wrTime.toString()));
 
         const sign = diff > 0 ? "+" : "";
-        animateValue(wrDiffEl, `${sign}${formatTime(Math.abs(diff).toString())}`);
+        animateValue(wrDiffEl, `${sign}${formatTimeDiff(Math.abs(diff).toString())}`);
         wrDiffEl.style.color = (diff > 0) ? "var(--accent-color)" : (diff < 0 ? "#2ecc71" : "inherit");
     } else if (wrTimeVal && parseFloat(wrTimeVal) > 0) {
         animateValue(wrTimeEl, formatTime(wrTimeVal));

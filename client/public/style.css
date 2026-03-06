@@ -44,7 +44,7 @@ body {
     display: flex;
     flex-direction: column;
     transition: all 0.4s ease;
-    margin-bottom: 4px;
+    margin-bottom: 0;
 }
 
 .cards-layout.horizontal {
@@ -727,12 +727,16 @@ body {
     flex-wrap: wrap;
     justify-content: space-around;
     align-items: center;
+    align-content: center;
     background: rgba(255,255,255,0.05);
     padding: 8px 10px;
     border-radius: 6px;
     margin-bottom: 8px;
-    gap: 4px 0;
+    gap: 0;
     -webkit-app-region: no-drag;
+    /* Reserve space for the title so height never changes */
+    min-height: 52px;
+    position: relative;
 }
 
 .info-card-title {
@@ -744,18 +748,19 @@ body {
     color: var(--text-color);
     opacity: 0;
     font-weight: 700;
+    height: 14px;
+    line-height: 14px;
     margin: 0;
     padding: 0;
-    max-height: 0;
-    overflow: hidden;
-    transition: opacity 0.2s ease, max-height 0.2s ease, margin 0.2s ease;
-    line-height: 1.2;
+    transition: opacity 0.2s ease;
 }
 
 .info-card:hover .info-card-title {
     opacity: 0.5;
-    max-height: 16px;
-    margin-bottom: 4px;
+}
+
+.info-card:hover .info-card-stat {
+    transform: translateY(2px);
 }
 
 .info-card-stat {
@@ -764,6 +769,7 @@ body {
     align-items: center;
     flex: 1 0 auto;
     min-width: 40px;
+    transition: transform 0.2s ease;
 }
 
 .info-card-label {
