@@ -40,93 +40,6 @@
                 </div>
             </div>
         </div>
-        <div id="profile-section" class="profile-section" style="display: none;">
-            <div id="profile-rank-card" class="profile-rank-header">
-                <div class="profile-rank-title-row">
-                    <span class="profile-rank-title" id="profile-rank-title">-</span>
-                </div>
-                <div class="profile-rank-stats-row">
-                    <div class="profile-rank-stat">
-                        <span class="profile-rank-stat-label">Points</span>
-                        <span class="profile-rank-stat-value" id="profile-points">-</span>
-                    </div>
-                    <div class="profile-rank-stat">
-                        <span class="profile-rank-stat-label">Global</span>
-                        <span class="profile-rank-stat-value" id="profile-global-rank">-</span>
-                    </div>
-                    <div class="profile-rank-stat">
-                        <span class="profile-rank-stat-label">Country</span>
-                        <span class="profile-rank-stat-value" id="profile-country-rank">-</span>
-                    </div>
-                    <div class="profile-rank-stat">
-                        <span class="profile-rank-stat-label">PC%</span>
-                        <span class="profile-rank-stat-value" id="profile-completion">-</span>
-                    </div>
-                </div>
-            </div>
-
-            <div id="map-info-card" class="info-card" style="display: none;">
-                <div class="info-card-stat">
-                    <span class="info-card-label">Map</span>
-                    <span class="info-card-value map-name-clickable" id="map-name" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading...</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Tier</span>
-                    <span class="info-card-value" id="map-tier-value">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Playtime</span>
-                    <span class="info-card-value" id="profile-playtime">-</span>
-                </div>
-            </div>
-
-            <div id="completions-card" class="info-card" style="display: none;">
-                <div class="info-card-title">Completions</div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Maps</span>
-                    <span class="info-card-value" id="profile-maps">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Stages</span>
-                    <span class="info-card-value" id="profile-stages">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Bonuses</span>
-                    <span class="info-card-value" id="profile-bonuses">-</span>
-                </div>
-            </div>
-
-            <div id="records-card" class="info-card" style="display: none;">
-                <div class="info-card-title">Records</div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">WRs</span>
-                    <span class="info-card-value" id="profile-wrs">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">WRCPs</span>
-                    <span class="info-card-value" id="profile-wrcps">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">WRBs</span>
-                    <span class="info-card-value" id="profile-wrbs">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Top 10</span>
-                    <span class="info-card-value" id="profile-top10s">-</span>
-                </div>
-                <div class="info-card-stat">
-                    <span class="info-card-label">Groups</span>
-                    <span class="info-card-value" id="profile-groups">-</span>
-                </div>
-            </div>
-
-            <div id="points-breakdown-card" class="info-card" style="display: none;">
-                <div class="info-card-title">Points Breakdown</div>
-            </div>
-        </div>
-
-        <hr id="profile-divider" class="section-divider" style="display: none;">
-
         <div id="cards-layout" class="cards-layout">
 
             <div id="main-map-section" class="layout-panel" style="display: none;">
@@ -260,11 +173,98 @@
 
         </div>
 
+        <div id="map-info-card" class="info-card" style="display: none;">
+            <div class="info-card-stat">
+                <span class="info-card-label">Map</span>
+                <span class="info-card-value map-name-clickable" id="map-name" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading...</span>
+            </div>
+            <div class="info-card-stat">
+                <span class="info-card-label">Tier</span>
+                <span class="info-card-value" id="map-tier-value">-</span>
+            </div>
+            <div class="info-card-stat">
+                <span class="info-card-label">Playtime</span>
+                <span class="info-card-value" id="profile-playtime">-</span>
+            </div>
+        </div>
+
         <div id="zone-bar-container" class="zone-bar-container" style="display: none;">
             <div id="zone-bar-stages" class="zone-bar-row"></div>
             <div id="zone-bar-bonuses" class="zone-bar-row"></div>
             <div id="zone-bar-tooltip" class="zone-bar-tooltip"></div>
         </div>
+
+        <div id="profile-section" class="profile-section" style="display: none;">
+            <div id="profile-rank-card" class="profile-rank-header">
+                <div class="profile-rank-title-row">
+                    <span class="profile-rank-title" id="profile-rank-title">-</span>
+                </div>
+                <div class="profile-rank-stats-row">
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Points</span>
+                        <span class="profile-rank-stat-value" id="profile-points">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Global</span>
+                        <span class="profile-rank-stat-value" id="profile-global-rank">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">Country</span>
+                        <span class="profile-rank-stat-value" id="profile-country-rank">-</span>
+                    </div>
+                    <div class="profile-rank-stat">
+                        <span class="profile-rank-stat-label">PC%</span>
+                        <span class="profile-rank-stat-value" id="profile-completion">-</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="completions-card" class="info-card" style="display: none;">
+                <div class="info-card-title">Completions</div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Maps</span>
+                    <span class="info-card-value" id="profile-maps">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Stages</span>
+                    <span class="info-card-value" id="profile-stages">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Bonuses</span>
+                    <span class="info-card-value" id="profile-bonuses">-</span>
+                </div>
+            </div>
+
+            <div id="records-card" class="info-card" style="display: none;">
+                <div class="info-card-title">Records</div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRs</span>
+                    <span class="info-card-value" id="profile-wrs">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRCPs</span>
+                    <span class="info-card-value" id="profile-wrcps">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">WRBs</span>
+                    <span class="info-card-value" id="profile-wrbs">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Top 10</span>
+                    <span class="info-card-value" id="profile-top10s">-</span>
+                </div>
+                <div class="info-card-stat">
+                    <span class="info-card-label">Groups</span>
+                    <span class="info-card-value" id="profile-groups">-</span>
+                </div>
+            </div>
+
+            <div id="points-breakdown-card" class="info-card" style="display: none;">
+                <div class="info-card-title">Points Breakdown</div>
+            </div>
+        </div>
+
+        <hr id="profile-divider" class="section-divider" style="display: none;">
 
         <div id="empty-state" class="empty-state" style="display: none;">( .  )(  . )</div>
 

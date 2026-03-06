@@ -288,6 +288,8 @@ function onGameOrSurfTypeChanged(prevGameType, prevSurfType) {
         // We have cached data — just re-render the UI from it
         if (profileCache) populateProfile(profileCache);
         refreshLayoutFromCache();
+        // Update lastRefreshTime so footer timer doesn't show "waiting..."
+        saveLastRefreshTime(Date.now());
         resizeOverlay();
     } else {
         // No cache — clear and fetch fresh
@@ -297,7 +299,8 @@ function onGameOrSurfTypeChanged(prevGameType, prevSurfType) {
         currentMap = null;
         browsingZone = null;
         displayedStageZone = null;
-        saveLastRefreshTime(0);
+        // Don't reset lastRefreshTime to 0 — instead keep it so footer shows
+        // a countdown. fetchStats will update it when the fetch completes.
         fetchStats();
     }
 }
@@ -570,14 +573,15 @@ function applyConfig() {
     const showProfileStats = currentConfig.showProfileStats !== false;
     const showMapInfo = currentConfig.showMapInfo !== false;
     const showPointsBreakdown = currentConfig.showPointsBreakdown !== false;
-    const showAnyProfile = showRankCard || showProfileStats || showMapInfo || showPointsBreakdown;
+    const showAnyProfile = showRankCard || showProfileStats || showPointsBreakdown;
 
     // Always set sub-element visibility
     const rankCard = document.getElementById('profile-rank-card');
     if (rankCard) rankCard.style.display = showRankCard ? '' : 'none';
     if (ui.completionsCard) ui.completionsCard.style.display = showProfileStats ? '' : 'none';
     if (ui.recordsCard) ui.recordsCard.style.display = showProfileStats ? '' : 'none';
-    if (ui.mapInfoCard) ui.mapInfoCard.style.display = showMapInfo ? '' : 'none';
+    // Map info card is now outside profile-section, managed independently
+    if (ui.mapInfoCard) ui.mapInfoCard.style.display = showMapInfo && currentMap ? '' : 'none';
     if (ui.pointsBreakdownCard) ui.pointsBreakdownCard.style.display = showPointsBreakdown ? '' : 'none';
 
     // Show/hide the wrapper section + divider
@@ -629,8 +633,6 @@ function applyConfig() {
     // ── Stage panel (main map + stage/bonus sections) visibility ─
     const showStage = currentConfig.showStagePanel !== false;
     if (ui.cardsLayout) ui.cardsLayout.style.display = showStage ? '' : 'none';
-    // Hide the divider between profile and cards when stage panel is off
-    if (!showStage && ui.profileDivider) ui.profileDivider.style.display = 'none';
 
     if (!currentConfig.steamId) {
         ui.playerNameText.innerText = "No SteamID";
@@ -813,8 +815,13 @@ async function pollBrowseState() {
 }
 
 function updateFooterTimer() {
+    if (isUpdating) {
+        ui.updateTimer.innerHTML = '<span class="spinner" style="width:8px;height:8px;margin-right:4px;vertical-align:middle;"></span>updating';
+        return;
+    }
+    
     if (!lastRefreshTime) {
-        ui.updateTimer.innerText = "waiting...";
+        ui.updateTimer.innerHTML = '<span class="spinner" style="width:8px;height:8px;margin-right:4px;vertical-align:middle;"></span>updating';
         return;
     }
     
@@ -838,6 +845,7 @@ async function fetchStats() {
     if (currentFetchController) currentFetchController.abort();
     currentFetchController = new AbortController();
     const signal = currentFetchController.signal;
+    const fetchId = currentFetchController; // Track which fetch this is
 
     isUpdating = true;
     
@@ -850,6 +858,9 @@ async function fetchStats() {
         }
         
         const data = await response.json();
+
+        // If this fetch was superseded by another, discard results
+        if (currentFetchController !== fetchId) return;
 
         // Auto-detect gameType from server response
         if (data.gameType && data.gameType !== currentConfig.gameType) {
@@ -878,15 +889,24 @@ async function fetchStats() {
         
     } catch (error) {
         if (error.name === 'AbortError') {
-            // Fetch was cancelled by a pill switch — not an error
+            // Fetch was cancelled by a pill switch — not an error, don't touch isUpdating
+            // (the new fetch or pill switch handler already reset it)
             return;
         }
         console.error("Fetch failed:", error);
-        ui.statusIndicator.innerHTML = '<span class="status-dot"></span>NET ERROR';
-        ui.statusIndicator.className = "status-badge offline";
-        showLoadingState();
+        // Only show error if this fetch is still the current one (not superseded)
+        if (currentFetchController === fetchId) {
+            ui.statusIndicator.innerHTML = '<span class="status-dot"></span>NET ERROR';
+            ui.statusIndicator.className = "status-badge offline";
+            // Don't call showLoadingState() — preserve existing data on transient errors
+            // Just update the status badge. Data will refresh on next poll cycle.
+            saveLastRefreshTime(Date.now());
+        }
     } finally {
-        isUpdating = false;
+        // Only clear isUpdating if this fetch is still the current one
+        if (currentFetchController === fetchId) {
+            isUpdating = false;
+        }
     }
 }
 
@@ -1394,11 +1414,12 @@ function populateProfile(d) {
     if (rankCard) rankCard.style.display = currentConfig.showRankCard !== false ? '' : 'none';
     ui.completionsCard.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
     ui.recordsCard.style.display = currentConfig.showProfileStats !== false ? '' : 'none';
-    ui.mapInfoCard.style.display = currentConfig.showMapInfo !== false ? '' : 'none';
+    // Map info card is outside profile-section, managed separately
+    ui.mapInfoCard.style.display = (currentConfig.showMapInfo !== false && currentMap) ? '' : 'none';
     ui.pointsBreakdownCard.style.display = currentConfig.showPointsBreakdown !== false ? '' : 'none';
 
     // Show profile section if at least one sub-section is visible
-    const showAny = currentConfig.showRankCard !== false || currentConfig.showProfileStats !== false || currentConfig.showMapInfo !== false || currentConfig.showPointsBreakdown !== false;
+    const showAny = currentConfig.showRankCard !== false || currentConfig.showProfileStats !== false || currentConfig.showPointsBreakdown !== false;
     ui.profileSection.style.display = showAny ? 'block' : 'none';
     ui.profileDivider.style.display = showAny ? 'block' : 'none';
     resizeOverlay();
@@ -1593,9 +1614,11 @@ function updateUI(data) {
             setTierBadge(data.mapInfo.tier);
         }
 
-        // Show map info card if toggle is on
+        // Show map info card if toggle is on (it's now a standalone card outside profile-section)
         if (currentConfig.showMapInfo !== false) {
             ui.mapInfoCard.style.display = '';
+        } else {
+            ui.mapInfoCard.style.display = 'none';
         }
 
         if (data.serverName) {
@@ -1619,15 +1642,30 @@ function updateUI(data) {
                     item.innerHTML = `${flagHtml}<span class="player-list-name">${p.name}</span><span class="player-list-points">${parseInt(p.points || 0).toLocaleString()} pts</span>`;
                     
                     item.addEventListener('click', () => {
+                        // Abort any in-flight requests for the previous player
+                        if (currentFetchController) {
+                            currentFetchController.abort();
+                            currentFetchController = null;
+                        }
+                        isUpdating = false;
+                        mapStatsFetching = null;
+
+                        // Switch to the selected player
                         currentConfig.steamId = p.steamid;
                         profileCache = null;
                         lastProfileFetch = 0;
                         zoneCache.clear();
+                        pillSnapshotCache.clear();
                         currentMap = null;
+                        currentZone = null;
                         browsingZone = null;
+                        displayedStageZone = null;
+                        saveLastRefreshTime(0);
+
                         ui.playersModal.style.display = 'none';
-                        fetchStats();
-                        fetchProfile();
+
+                        // Restart polling from scratch for the new player
+                        startPolling(true);
                     });
                     
                     ui.playersList.appendChild(item);
@@ -1745,6 +1783,7 @@ function updateUI(data) {
         ui.mapName.innerText = "Offline";
         ui.mapTierValue.innerText = '-';
         ui.profilePlaytime.innerText = '-';
+        ui.mapInfoCard.style.display = 'none';
         ui.zoneBarContainer.style.display = 'none';
         ui.playingOnLabel.style.display = 'none';
         ui.serverInfo.style.display = 'none';
