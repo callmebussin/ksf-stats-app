@@ -1389,27 +1389,14 @@ function createZoneBox(zoneId, label, mapInfo) {
         const cached = zoneCache.get(zoneId);
         if (!cached) return;
 
-        // Determine slide direction
-        const currentViewing = browsingZone !== null ? browsingZone : (displayedStageZone !== null ? displayedStageZone : currentZone);
-        const slideDir = (zoneId > currentViewing) ? 'left' : (zoneId < currentViewing ? 'right' : null);
-
         browsingZone = zoneId;
         displayedStageZone = zoneId;
         broadcastBrowseState(zoneId);
 
-        if (slideDir) {
-            slideStageContent(slideDir, () => {
-                populateZoneStats(cached);
-                ui.stageSectionLabel.innerText = formatZone(zoneId, mapInfo);
-                updateNavButtons();
-                updateZoneBarActive();
-            });
-        } else {
-            populateZoneStats(cached);
-            ui.stageSectionLabel.innerText = formatZone(zoneId, mapInfo);
-            updateNavButtons();
-            updateZoneBarActive();
-        }
+        populateZoneStats(cached);
+        ui.stageSectionLabel.innerText = formatZone(zoneId, mapInfo);
+        updateNavButtons();
+        updateZoneBarActive();
     });
 
     return box;
