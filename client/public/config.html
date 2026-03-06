@@ -286,10 +286,6 @@
                     <span>Footer</span>
                     <div class="toggle"><input type="checkbox" id="show-footer" checked><span class="toggle-slider"></span></div>
                 </label>
-                <label class="toggle-row" for="show-zone-bar">
-                    <span>Zone Completion Bar</span>
-                    <div class="toggle"><input type="checkbox" id="show-zone-bar" checked><span class="toggle-slider"></span></div>
-                </label>
                 <label class="toggle-row" for="show-rank-card">
                     <span>Rank Card</span>
                     <div class="toggle"><input type="checkbox" id="show-rank-card" checked><span class="toggle-slider"></span></div>
@@ -305,6 +301,10 @@
                 <label class="toggle-row" for="show-map-image" id="show-map-image-row">
                     <span>Map Background Image</span>
                     <div class="toggle"><input type="checkbox" id="show-map-image" checked><span class="toggle-slider"></span></div>
+                </label>
+                <label class="toggle-row" for="show-zone-bar" id="show-zone-bar-row">
+                    <span>Zone Completion Bar</span>
+                    <div class="toggle"><input type="checkbox" id="show-zone-bar" checked><span class="toggle-slider"></span></div>
                 </label>
                 <label class="toggle-row" for="show-points-breakdown">
                     <span>Points Breakdown Card</span>
@@ -434,6 +434,7 @@
             showMapInfo: document.getElementById('show-map-info'),
             showMapImage: document.getElementById('show-map-image'),
             showMapImageRow: document.getElementById('show-map-image-row'),
+            showZoneBarRow: document.getElementById('show-zone-bar-row'),
             showPointsBreakdown: document.getElementById('show-points-breakdown'),
             showStagePanel: document.getElementById('show-stage-panel'),
             showDetailedStatsRow: document.getElementById('show-detailed-stats-row'),
@@ -512,6 +513,7 @@
         function updateMapInfoDeps() {
             const show = els.showMapInfo.checked;
             els.showMapImageRow.style.display = show ? '' : 'none';
+            els.showZoneBarRow.style.display = show ? '' : 'none';
         }
 
         function updateStagePanelDeps() {

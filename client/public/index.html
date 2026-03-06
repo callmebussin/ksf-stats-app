@@ -14,6 +14,9 @@
                 <h2 id="player-name"><img id="player-flag" class="player-flag" style="display:none"><span id="player-name-text">Player Name</span></h2>
                 <h3 id="header-points" class="header-points">-</h3>
             </div>
+            <div class="header-center">
+                <span class="header-rank-title" id="profile-rank-title">-</span>
+            </div>
             <div id="pill-toggles" class="pill-toggles">
                 <div class="pill-group" id="gametype-pill">
                     <div class="pill-track">
@@ -198,20 +201,17 @@
                     </div>
                 </div>
             </div>
-        </div>
-
-        <div id="zone-bar-container" class="zone-bar-container" style="display: none;">
-            <div id="zone-bar-stages" class="zone-bar-row"></div>
-            <div id="zone-bar-bonuses" class="zone-bar-row"></div>
-            <div id="zone-bar-tooltip" class="zone-bar-tooltip"></div>
+            <div id="zone-bar-container" class="zone-bar-container" style="display: none;">
+                <div id="zone-bar-stages" class="zone-bar-row"></div>
+                <div id="zone-bar-bonuses" class="zone-bar-row"></div>
+                <div id="zone-bar-tooltip" class="zone-bar-tooltip"></div>
+            </div>
         </div>
 
         <div id="profile-section" class="profile-section" style="display: none;">
             <div id="profile-row-top" class="profile-card-row">
-                <div id="profile-rank-card" class="profile-rank-header">
-                    <div class="profile-rank-title-row">
-                        <span class="profile-rank-title" id="profile-rank-title">-</span>
-                    </div>
+                <div id="profile-rank-card" class="profile-rank-header info-card">
+                    <div class="info-card-title">Rank &amp; Points</div>
                     <div class="profile-rank-stats-row">
                         <div class="profile-rank-stat">
                             <span class="profile-rank-stat-label">Points</span>
@@ -250,6 +250,10 @@
             </div>
 
             <div id="profile-row-bottom" class="profile-card-row">
+                <div id="points-breakdown-card" class="info-card" style="display: none;">
+                    <div class="info-card-title">Points Breakdown</div>
+                </div>
+
                 <div id="records-card" class="info-card" style="display: none;">
                     <div class="info-card-title">Records</div>
                     <div class="info-card-stat">
@@ -272,10 +276,6 @@
                         <span class="info-card-label">Groups</span>
                         <span class="info-card-value" id="profile-groups">-</span>
                     </div>
-                </div>
-
-                <div id="points-breakdown-card" class="info-card" style="display: none;">
-                    <div class="info-card-title">Points Breakdown</div>
                 </div>
             </div>
         </div>

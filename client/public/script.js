@@ -755,15 +755,14 @@ function applyConfig() {
         hideProfile();
     }
 
-    // ── Zone bar visibility ─────────────────────────────────────
-    // Re-render zone bar when toggling on, hide when toggling off
-    if (currentConfig.showZoneBar !== false && hasInitialized && currentMap) {
+    // ── Zone bar visibility (inside map card, depends on showMapInfo) ──
+    if (currentConfig.showZoneBar !== false && showMapInfo && hasInitialized && currentMap) {
         // Find mapInfo from any cached zone entry
         const anyZone = zoneCache.values().next().value;
         if (anyZone && anyZone.mapInfo) {
             updateMapCompletionStatus(anyZone.mapInfo);
         }
-    } else if (currentConfig.showZoneBar === false) {
+    } else if (currentConfig.showZoneBar === false || !showMapInfo) {
         ui.zoneBarContainer.style.display = 'none';
     }
 
@@ -1231,7 +1230,8 @@ function updateMapCompletionStatus(mapInfo) {
     // Highlight the currently viewed zone
     updateZoneBarActive();
 
-    ui.zoneBarContainer.style.display = currentConfig.showZoneBar !== false ? 'block' : 'none';
+    const showBar = currentConfig.showZoneBar !== false && currentConfig.showMapInfo !== false;
+    ui.zoneBarContainer.style.display = showBar ? 'block' : 'none';
 }
 
 function createZoneBox(zoneId, label, mapInfo) {
@@ -1563,10 +1563,10 @@ function populateProfile(d) {
     const totalPts = d.points?.points ? Math.round(d.points.points) : 0;
     ui.headerPoints.innerText = totalPts > 0 ? `${totalPts.toLocaleString()} points` : "-";
 
-    // Rank title inside rank card (centered, larger)
+    // Rank title in header
     const rankCss = getRankTitleCss(d.rankTitle);
     ui.profileRankTitle.innerText = d.rankTitle || "-";
-    ui.profileRankTitle.className = "profile-rank-title";
+    ui.profileRankTitle.className = "header-rank-title";
     if (rankCss) ui.profileRankTitle.classList.add(rankCss);
 
     // Rank card: Points, Global Rank, Country Rank, PC%
@@ -1765,6 +1765,26 @@ function refreshLayoutFromCache() {
     const mainMapData = zoneCache.get(0) || null;
     const showMainMap = currentConfig.showMainMapStats && mainMapData;
     showMainMapPanel(showMainMap, mainMapData);
+
+    // Re-render map info card from cached data
+    if (currentMap) {
+        ui.mapName.innerText = formatMapDisplayName(currentMap);
+        if (currentConfig.showMapInfo !== false) {
+            ui.mapInfoCard.style.display = '';
+        }
+        setMapBackground(currentMap);
+        updateMapPlaytime();
+
+        // Re-render zone bar + map info stats from cached mapInfo
+        const anyZone = zoneCache.values().next().value;
+        if (anyZone && anyZone.mapInfo) {
+            if (anyZone.mapInfo.tier) setTierBadge(anyZone.mapInfo.tier);
+            updateMapCompletionStatus(anyZone.mapInfo);
+        }
+
+        // Show stage nav
+        ui.stageNav.style.display = 'flex';
+    }
 
     // Re-render the stage panel with the correct zone
     const liveZone = browsingZone !== null ? browsingZone : currentZone;

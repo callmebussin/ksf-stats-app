@@ -211,7 +211,7 @@ body {
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: 8px;
     position: relative;
-    min-height: 44px;
+    min-height: 56px;
 }
 
 .avatar {
@@ -302,10 +302,11 @@ body {
     background: #e74c3c;
 }
 
-/* ── Zone Completion Bar ────────────────────────────────────── */
+/* ── Zone Completion Bar (inside map card) ──────────────────── */
 .zone-bar-container {
-    margin: 8px 0;
     position: relative;
+    z-index: 1;
+    padding: 0 12px 10px;
 }
 
 .zone-bar-row {
@@ -643,19 +644,9 @@ body {
 }
 
 .profile-rank-header {
-    display: flex;
     flex-direction: column;
     align-items: center;
-    background: rgba(255,255,255,0.05);
-    padding: 8px 10px;
-    border-radius: 6px;
-    margin-bottom: 8px;
     gap: 6px;
-}
-
-.profile-rank-title-row {
-    text-align: center;
-    width: 100%;
 }
 
 .profile-rank-stats-row {
@@ -712,13 +703,13 @@ body {
     opacity: 1;
 }
 
-/* Dark tint over the image — uses bg-color at high opacity for theme consistency */
+/* Dark tint over the image — uses bg-color for theme consistency */
 .map-info-bg::after {
     content: '';
     position: absolute;
     inset: 0;
     background: var(--bg-color);
-    opacity: 0.7;
+    opacity: 0.55;
 }
 
 .map-info-content {
@@ -727,12 +718,13 @@ body {
     display: flex;
     align-items: center;
     padding: 10px 12px;
-    gap: 12px;
+    gap: 16px;
 }
 
 .map-info-left {
-    flex-shrink: 1;
+    flex-shrink: 0;
     min-width: 0;
+    max-width: 45%;
 }
 
 .map-info-name {
@@ -759,9 +751,8 @@ body {
 .map-info-stats {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-left: auto;
-    flex-shrink: 0;
+    flex: 1;
+    justify-content: space-around;
 }
 
 /* ── Profile Card Rows (horizontal pairing) ─────────────────── */
@@ -771,7 +762,6 @@ body {
     margin-bottom: 0;
 }
 
-.profile-card-row > .profile-rank-header,
 .profile-card-row > .info-card {
     flex: 1;
     min-width: 0;
@@ -799,8 +789,17 @@ body {
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--text-color);
-    opacity: 0.5;
+    opacity: 0;
     font-weight: 700;
+    margin-bottom: 0;
+    max-height: 0;
+    overflow: hidden;
+    transition: opacity 0.2s ease, max-height 0.2s ease, margin-bottom 0.2s ease;
+}
+
+.info-card:hover .info-card-title {
+    opacity: 0.5;
+    max-height: 20px;
     margin-bottom: 4px;
 }
 
@@ -834,15 +833,7 @@ body {
 
 /* map-name-clickable styles now on .map-info-name */
 
-.profile-rank-title {
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--accent-color);
-    line-height: 1.2;
-    -webkit-background-clip: text;
-    background-clip: text;
-    letter-spacing: 0.5px;
-}
+/* Rank title styling is now on .header-rank-title in the header */
 
 .rank-rookie {
     background: linear-gradient(90deg, #888, #aaa, #888, #999, #888);
@@ -1135,12 +1126,36 @@ body {
     to { transform: rotate(360deg); }
 }
 
+/* ── Header Center (rank title + pills stacked) ─────────────── */
+.header-center {
+    position: absolute;
+    left: 50%;
+    top: 4px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+    pointer-events: none;
+}
+
+.header-rank-title {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    line-height: 1.2;
+    margin-bottom: 2px;
+    text-shadow: 0 0 12px currentColor, 0 0 4px currentColor;
+    filter: drop-shadow(0 0 3px currentColor);
+}
+
 /* ── Pill Toggle Controls (inside header) ─────────────────── */
 .pill-toggles {
     position: absolute;
     left: 50%;
-    top: calc(50% - 4px);
-    transform: translate(-50%, -50%);
+    bottom: 8px;
+    transform: translateX(-50%);
     display: flex;
     flex-direction: row;
     gap: 6px;
