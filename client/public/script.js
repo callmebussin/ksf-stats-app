@@ -522,19 +522,16 @@ function navigateZone(direction) {
     if (newIdx < 0 || newIdx >= zones.length) return;
 
     const newZone = zones[newIdx];
-    const slideDir = direction > 0 ? 'left' : 'right';
     
     browsingZone = newZone;
     displayedStageZone = newZone;
     broadcastBrowseState(newZone);
     const cached = zoneCache.get(newZone);
     if (cached) {
-        slideStageContent(slideDir, () => {
-            populateZoneStats(cached);
-            ui.stageSectionLabel.innerText = formatZone(newZone, cached.mapInfo);
-            updateNavButtons();
-            updateZoneBarActive();
-        });
+        populateZoneStats(cached);
+        ui.stageSectionLabel.innerText = formatZone(newZone, cached.mapInfo);
+        updateNavButtons();
+        updateZoneBarActive();
     }
 }
 
@@ -561,40 +558,119 @@ function updateNavButtons() {
     ui.stageNavRight.disabled = (idx >= zones.length - 1);
 }
 
-function slideStageContent(direction, populateCallback) {
-    const el = ui.stageContent;
-    const outClass = direction === 'left' ? 'slide-out-left' : 'slide-out-right';
-    const inClass = direction === 'left' ? 'slide-in-right' : 'slide-in-left';
+// slideStageContent removed — stage navigation now updates instantly
 
-    el.classList.add(outClass);
-    el.addEventListener('animationend', function handler() {
-        el.removeEventListener('animationend', handler);
-        el.classList.remove(outClass);
-        populateCallback();
-        el.classList.add(inClass);
-        el.addEventListener('animationend', function handler2() {
-            el.removeEventListener('animationend', handler2);
-            el.classList.remove(inClass);
-        });
-    });
+// ── Smooth number counting animation (stopwatch effect) ─────────────────────
+const ANIM_DURATION = 400; // ms
+const ANIM_STEPS = 20;
+const activeAnimations = new WeakMap();
+
+function animateValue(element, newText) {
+    if (!element) return;
+    const oldText = element.innerText;
+    if (oldText === newText) return;
+
+    // Cancel any running animation on this element
+    const existing = activeAnimations.get(element);
+    if (existing) cancelAnimationFrame(existing);
+
+    // Try to extract numeric value from both old and new text
+    const oldNum = parseDisplayNumber(oldText);
+    const newNum = parseDisplayNumber(newText);
+
+    // If both are valid numbers and the format matches, animate the count
+    if (oldNum !== null && newNum !== null && oldNum !== newNum && getNumberFormat(oldText) === getNumberFormat(newText)) {
+        const startTime = performance.now();
+        const format = getNumberFormat(newText);
+
+        function step(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / ANIM_DURATION, 1);
+            // Ease out cubic for smooth deceleration
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = oldNum + (newNum - oldNum) * eased;
+            element.innerText = formatAnimatedNumber(current, newText, format);
+            if (progress < 1) {
+                activeAnimations.set(element, requestAnimationFrame(step));
+            } else {
+                element.innerText = newText; // Ensure exact final value
+                activeAnimations.delete(element);
+            }
+        }
+        activeAnimations.set(element, requestAnimationFrame(step));
+    } else {
+        element.innerText = newText;
+    }
 }
 
-function animateTimeChange(element, newText) {
-    const oldText = element.innerText;
-    if (oldText === newText || oldText === "--:--.--") {
-        element.innerText = newText;
-        return;
+function parseDisplayNumber(text) {
+    if (!text || text === '-' || text === '--:--.--' || text.includes('loading')) return null;
+    // Time format: MM:SS.mmm
+    const timeMatch = text.match(/^(\d+):(\d+)\.(\d+)$/);
+    if (timeMatch) {
+        return parseInt(timeMatch[1]) * 60 + parseInt(timeMatch[2]) + parseInt(timeMatch[3]) / 1000;
     }
+    // Rank format: N/M or -/M
+    const rankMatch = text.match(/^(-?\d[\d,]*)\s*\/\s*(-?\d[\d,]*)$/);
+    if (rankMatch) return parseFloat(rankMatch[1].replace(/,/g, ''));
+    // Hash-prefixed: #4068
+    const hashMatch = text.match(/^#([\d,]+)$/);
+    if (hashMatch) return parseFloat(hashMatch[1].replace(/,/g, ''));
+    // Percentage: 8.77%
+    const pctMatch = text.match(/^([\d,.]+)%$/);
+    if (pctMatch) return parseFloat(pctMatch[1].replace(/,/g, ''));
+    // Fraction: 108/925
+    const fracMatch = text.match(/^([\d,]+)\/([\d,]+)$/);
+    if (fracMatch) return parseFloat(fracMatch[1].replace(/,/g, ''));
+    // Plus/minus prefix: +00:04.600
+    if (text.startsWith('+') || text.startsWith('-')) {
+        const inner = parseDisplayNumber(text.slice(1));
+        if (inner !== null) return (text.startsWith('-') ? -1 : 1) * inner;
+    }
+    // Plain number: 9,174 or 82
+    const plain = text.replace(/,/g, '');
+    const num = parseFloat(plain);
+    return isNaN(num) ? null : num;
+}
 
-    element.innerHTML = '';
-    for (let i = 0; i < newText.length; i++) {
-        const span = document.createElement('span');
-        span.className = 'time-char';
-        span.textContent = newText[i];
-        if (i < oldText.length && oldText[i] !== newText[i]) {
-            span.classList.add('roll-down');
+function getNumberFormat(text) {
+    if (/^\d+:\d+\.\d+$/.test(text)) return 'time';
+    if (/^-?\d[\d,]*\s*\/\s*-?\d[\d,]*$/.test(text)) return 'rank';
+    if (/^#[\d,]+$/.test(text)) return 'hash';
+    if (/^[\d,.]+%$/.test(text)) return 'pct';
+    if (/^[\d,]+\/[\d,]+$/.test(text)) return 'frac';
+    if (/^[+-]?\d/.test(text) && text.includes(':')) return 'time_diff';
+    return 'plain';
+}
+
+function formatAnimatedNumber(value, template, format) {
+    switch (format) {
+        case 'time': {
+            const mins = Math.floor(value / 60);
+            const secs = Math.floor(value % 60);
+            const ms = Math.floor((value % 1) * 1000);
+            return `${mins.toString().padStart(2,'0')}:${secs.toString().padStart(2,'0')}.${ms.toString().padStart(3,'0')}`;
         }
-        element.appendChild(span);
+        case 'rank': {
+            const parts = template.match(/^(-?\d[\d,]*)\s*\/\s*(-?\d[\d,]*)$/);
+            const total = parts ? parts[2] : '';
+            return `${Math.round(value).toLocaleString()}/${total}`;
+        }
+        case 'hash':
+            return `#${Math.round(value).toLocaleString()}`;
+        case 'pct':
+            return `${value.toFixed(2)}%`;
+        case 'frac': {
+            const parts = template.match(/^([\d,]+)\/([\d,]+)$/);
+            const total = parts ? parts[2] : '';
+            return `${Math.round(value).toLocaleString()}/${total}`;
+        }
+        case 'plain':
+        default:
+            // Preserve comma formatting if template had commas
+            if (template.includes(',')) return Math.round(value).toLocaleString();
+            if (template.includes('.')) return value.toFixed((template.split('.')[1] || '').length);
+            return Math.round(value).toString();
     }
 }
 
@@ -1112,17 +1188,13 @@ function applyRemoteBrowseState(remoteZone) {
     const cached = zoneCache.get(zone);
     if (!cached) return;
 
-    const prevViewing = browsingZone !== null ? browsingZone : currentZone;
-    const slideDir = (zone > prevViewing) ? 'left' : 'right';
     browsingZone = zone;
     displayedStageZone = zone;
 
-    slideStageContent(slideDir, () => {
-        populateZoneStats(cached);
-        ui.stageSectionLabel.innerText = formatZone(zone, cached.mapInfo);
-        updateNavButtons();
-        updateZoneBarActive();
-    });
+    populateZoneStats(cached);
+    ui.stageSectionLabel.innerText = formatZone(zone, cached.mapInfo);
+    updateNavButtons();
+    updateZoneBarActive();
 }
 
 function formatTime(secondsStr) {
@@ -1342,14 +1414,13 @@ function setWrDisplay(wrTimeEl, wrDiffEl, playerTime, wrDiff, wrTimeVal) {
 
     if (!isNaN(time) && !isNaN(diff) && time > 0) {
         const wrTime = time - diff;
-        wrTimeEl.innerText = formatTime(wrTime.toString());
+        animateValue(wrTimeEl, formatTime(wrTime.toString()));
 
         const sign = diff > 0 ? "+" : "";
-        wrDiffEl.innerText = `${sign}${formatTime(Math.abs(diff).toString())}`;
+        animateValue(wrDiffEl, `${sign}${formatTime(Math.abs(diff).toString())}`);
         wrDiffEl.style.color = (diff > 0) ? "var(--accent-color)" : (diff < 0 ? "#2ecc71" : "inherit");
     } else if (wrTimeVal && parseFloat(wrTimeVal) > 0) {
-        // Player has no completion but we have the WR time
-        wrTimeEl.innerText = formatTime(wrTimeVal);
+        animateValue(wrTimeEl, formatTime(wrTimeVal));
         wrDiffEl.innerText = "";
         wrDiffEl.style.color = "inherit";
     } else {
@@ -1448,60 +1519,40 @@ function formatRank(rank, totalRanks, completions) {
 }
 
 function populateMainMapStats(d) {
-    ui.mainStatTime.innerText = formatTime(d.time);
-    ui.mainStatRank.innerText = formatRank(d.rank, d.totalRanks, d.completions);
+    animateValue(ui.mainStatTime, formatTime(d.time));
+    animateValue(ui.mainStatRank, formatRank(d.rank, d.totalRanks, d.completions));
 
     setWrDisplay(ui.mainStatWrTime, ui.mainStatWrDiff, d.time, d.wrDiff, d.wrTime);
 
-    ui.mainStatCompletions.innerText = d.completions || "-";
-    ui.mainStatAttempts.innerText = d.attempts || "-";
+    animateValue(ui.mainStatCompletions, d.completions || "-");
+    animateValue(ui.mainStatAttempts, d.attempts || "-");
     applyGroupLabel(ui.mainStatGroupLabel, d.group, d.completions);
-    ui.mainStatCompRate.innerText = formatCompRate(d.completions, d.attempts);
-    ui.mainStatAvgVel.innerText = d.avgVel ? Math.round(parseFloat(d.avgVel)) : "-";
+    animateValue(ui.mainStatCompRate, formatCompRate(d.completions, d.attempts));
+    animateValue(ui.mainStatAvgVel, d.avgVel ? Math.round(parseFloat(d.avgVel)).toString() : "-");
 
     ui.mainStatTotalTime.innerText = formatTotalTime(d.totalTime);
     ui.mainStatFirstDate.innerText = formatDate(d.firstDate);
 
-    ui.mainStatStartVel.innerText = d.startVel ? Math.round(parseFloat(d.startVel)) : "-";
-    ui.mainStatEndVel.innerText = d.endVel ? Math.round(parseFloat(d.endVel)) : "-";
+    animateValue(ui.mainStatStartVel, d.startVel ? Math.round(parseFloat(d.startVel)).toString() : "-");
+    animateValue(ui.mainStatEndVel, d.endVel ? Math.round(parseFloat(d.endVel)).toString() : "-");
 }
 
 function populateZoneStats(data) {
-    const newTime = formatTime(data.time);
-    const oldTime = ui.time.innerText;
-
-    const newSec = parseFloat(data.time);
-    let timeImproved = false;
-    if (oldTime !== "--:--.--" && oldTime !== newTime && !isNaN(newSec)) {
-        const oldParts = oldTime.match(/(\d+):(\d+)\.(\d+)/);
-        if (oldParts) {
-            const oldSec = parseInt(oldParts[1]) * 60 + parseInt(oldParts[2]) + parseInt(oldParts[3]) / 1000;
-            if (newSec < oldSec) {
-                timeImproved = true;
-            }
-        }
-    }
-
-    if (timeImproved) {
-        animateTimeChange(ui.time, newTime);
-    } else {
-        ui.time.innerText = newTime;
-    }
-
-    ui.zone.innerText = formatRank(data.rank, data.totalRanks, data.completions);
+    animateValue(ui.time, formatTime(data.time));
+    animateValue(ui.zone, formatRank(data.rank, data.totalRanks, data.completions));
 
     setWrDisplay(ui.wrTime, ui.wrDiff, data.time, data.wrDiff, data.wrTime);
     
-    ui.completions.innerText = data.completions || "-";
-    ui.attempts.innerText = data.attempts || "-";
+    animateValue(ui.completions, data.completions || "-");
+    animateValue(ui.attempts, data.attempts || "-");
     applyGroupLabel(ui.groupLabel, data.group, data.completions);
-    ui.compRate.innerText = formatCompRate(data.completions, data.attempts);
-    ui.avgVel.innerText = data.avgVel ? Math.round(parseFloat(data.avgVel)) : "-";
+    animateValue(ui.compRate, formatCompRate(data.completions, data.attempts));
+    animateValue(ui.avgVel, data.avgVel ? Math.round(parseFloat(data.avgVel)).toString() : "-");
     
     ui.totalTime.innerText = formatTotalTime(data.totalTime);
     ui.firstDate.innerText = formatDate(data.firstDate);
-    ui.startVel.innerText = data.startVel ? Math.round(parseFloat(data.startVel)) : "-";
-    ui.endVel.innerText = data.endVel ? Math.round(parseFloat(data.endVel)) : "-";
+    animateValue(ui.startVel, data.startVel ? Math.round(parseFloat(data.startVel)).toString() : "-");
+    animateValue(ui.endVel, data.endVel ? Math.round(parseFloat(data.endVel)).toString() : "-");
 }
 
 let profileCache = null;
@@ -1573,22 +1624,22 @@ function populateProfile(d) {
     if (rankCss) ui.profileRankTitle.classList.add(rankCss);
 
     // Rank card: Points, Global Rank, Country Rank, PC%
-    ui.profilePoints.innerText = d.points?.points ? Math.round(d.points.points).toLocaleString() : "-";
-    ui.profileGlobalRank.innerText = d.surfRank ? `#${d.surfRank}` : "-";
-    ui.profileCountryRank.innerText = d.countryRank ? `#${d.countryRank}` : "-";
-    ui.profileCompletion.innerText = d.percentCompletion ? `${d.percentCompletion}%` : "-";
+    animateValue(ui.profilePoints, d.points?.points ? Math.round(d.points.points).toLocaleString() : "-");
+    animateValue(ui.profileGlobalRank, d.surfRank ? `#${d.surfRank}` : "-");
+    animateValue(ui.profileCountryRank, d.countryRank ? `#${d.countryRank}` : "-");
+    animateValue(ui.profileCompletion, d.percentCompletion ? `${d.percentCompletion}%` : "-");
 
     if (d.completedZones && d.totalZones) {
-        ui.profileMaps.innerText = `${d.completedZones.map || 0}/${d.totalZones.TotalMaps || 0}`;
-        ui.profileStages.innerText = `${d.completedZones.stage || 0}/${d.totalZones.TotalStages || 0}`;
-        ui.profileBonuses.innerText = `${d.completedZones.bonus || 0}/${d.totalZones.TotalBonuses || 0}`;
+        animateValue(ui.profileMaps, `${d.completedZones.map || 0}/${d.totalZones.TotalMaps || 0}`);
+        animateValue(ui.profileStages, `${d.completedZones.stage || 0}/${d.totalZones.TotalStages || 0}`);
+        animateValue(ui.profileBonuses, `${d.completedZones.bonus || 0}/${d.totalZones.TotalBonuses || 0}`);
     }
 
-    ui.profileWrs.innerText = d.wrZones?.wr || "0";
-    ui.profileWrcps.innerText = d.wrZones?.wrcp || "0";
-    ui.profileWrbs.innerText = d.wrZones?.wrb || "0";
-    ui.profileTop10s.innerText = d.top10Groups?.top10 || "0";
-    ui.profileGroups.innerText = d.top10Groups?.groups || "0";
+    animateValue(ui.profileWrs, d.wrZones?.wr || "0");
+    animateValue(ui.profileWrcps, d.wrZones?.wrcp || "0");
+    animateValue(ui.profileWrbs, d.wrZones?.wrb || "0");
+    animateValue(ui.profileTop10s, d.top10Groups?.top10 || "0");
+    animateValue(ui.profileGroups, d.top10Groups?.groups || "0");
 
     // Points breakdown card
     populatePointsBreakdown(d.points);
@@ -1648,12 +1699,38 @@ function populatePointsBreakdown(points) {
         return;
     }
 
-    ui.pointsBreakdownCard.innerHTML = '<div class="info-card-title">Points Breakdown</div>' + items.map(item => `
-        <div class="info-card-stat">
-            <span class="info-card-label">${item.label}</span>
-            <span class="info-card-value">${Math.round(item.value).toLocaleString()}</span>
-        </div>
-    `).join('');
+    // Reuse existing stat elements for smooth animation
+    const existingStats = ui.pointsBreakdownCard.querySelectorAll('.info-card-stat');
+    const existingMap = {};
+    existingStats.forEach(el => {
+        const label = el.querySelector('.info-card-label');
+        if (label) existingMap[label.textContent] = el;
+    });
+
+    // Ensure title exists
+    if (!ui.pointsBreakdownCard.querySelector('.info-card-title')) {
+        ui.pointsBreakdownCard.insertAdjacentHTML('afterbegin', '<div class="info-card-title">Points Breakdown</div>');
+    }
+
+    // Remove stats that are no longer present
+    const newLabels = new Set(items.map(i => i.label));
+    existingStats.forEach(el => {
+        const label = el.querySelector('.info-card-label');
+        if (label && !newLabels.has(label.textContent)) el.remove();
+    });
+
+    for (const item of items) {
+        const existing = existingMap[item.label];
+        if (existing) {
+            const valueEl = existing.querySelector('.info-card-value');
+            if (valueEl) animateValue(valueEl, Math.round(item.value).toLocaleString());
+        } else {
+            const stat = document.createElement('div');
+            stat.className = 'info-card-stat';
+            stat.innerHTML = `<span class="info-card-label">${item.label}</span><span class="info-card-value">${Math.round(item.value).toLocaleString()}</span>`;
+            ui.pointsBreakdownCard.appendChild(stat);
+        }
+    }
 }
 
 function hideProfile() {
@@ -1962,20 +2039,10 @@ function updateUI(data) {
             browsingZone = null;
             broadcastBrowseState(null);
 
-            if (zoneChanged && stageZoneId === zoneId) {
-                const slideDir = (zoneId > prevZone) ? 'left' : 'right';
-                slideStageContent(slideDir, () => {
-                    populateZoneStats(stageData);
-                    ui.stageSectionLabel.innerText = formatZone(stageZoneId, data.mapInfo);
-                    updateNavButtons();
-                    updateZoneBarActive();
-                });
-            } else {
-                populateZoneStats(stageData);
-                ui.stageSectionLabel.innerText = formatZone(stageZoneId, data.mapInfo);
-                updateNavButtons();
-                updateZoneBarActive();
-            }
+            populateZoneStats(stageData);
+            ui.stageSectionLabel.innerText = formatZone(stageZoneId, data.mapInfo);
+            updateNavButtons();
+            updateZoneBarActive();
         } else {
             if (browsingZone === null || browsingZone === zoneId) {
                 populateZoneStats(stageData);

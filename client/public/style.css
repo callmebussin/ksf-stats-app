@@ -50,7 +50,7 @@ body {
 .cards-layout.horizontal {
     flex-direction: row;
     gap: 12px;
-    align-items: flex-start;
+    align-items: stretch;
 }
 
 .cards-layout.horizontal .layout-panel {
@@ -68,11 +68,7 @@ body {
     margin: 8px 0;
 }
 
-.card-divider {
-    border: none;
-    border-top: 1px solid rgba(255,255,255,0.08);
-    margin: 4px 0 8px;
-}
+/* card-divider removed — detailed stats now inside .main-stats */
 
 .section-label {
     font-size: 11px;
@@ -133,50 +129,7 @@ body {
     cursor: default;
 }
 
-.stage-slide-container {
-    position: relative;
-    overflow: hidden;
-}
-
-.stage-content {
-    transition: transform 0.35s ease, opacity 0.35s ease;
-}
-
-.stage-content.slide-out-left {
-    animation: slideOutLeft 0.3s ease forwards;
-}
-
-.stage-content.slide-in-right {
-    animation: slideInRight 0.3s ease forwards;
-}
-
-.stage-content.slide-out-right {
-    animation: slideOutRight 0.3s ease forwards;
-}
-
-.stage-content.slide-in-left {
-    animation: slideInLeft 0.3s ease forwards;
-}
-
-@keyframes slideOutLeft {
-    from { transform: translateX(0); opacity: 1; }
-    to   { transform: translateX(-100%); opacity: 0; }
-}
-
-@keyframes slideInRight {
-    from { transform: translateX(100%); opacity: 0; }
-    to   { transform: translateX(0); opacity: 1; }
-}
-
-@keyframes slideOutRight {
-    from { transform: translateX(0); opacity: 1; }
-    to   { transform: translateX(100%); opacity: 0; }
-}
-
-@keyframes slideInLeft {
-    from { transform: translateX(-100%); opacity: 0; }
-    to   { transform: translateX(0); opacity: 1; }
-}
+/* slide animations removed — stage nav updates instantly */
 
 #main-map-section {
     overflow: hidden;
@@ -194,19 +147,7 @@ body {
     transition: opacity 0.4s ease;
 }
 
-.time-char {
-    display: inline-block;
-    transition: transform 0.4s ease, opacity 0.4s ease;
-}
-
-.time-char.roll-down {
-    animation: rollDown 0.4s ease forwards;
-}
-
-@keyframes rollDown {
-    0%   { transform: translateY(-100%); opacity: 0; }
-    100% { transform: translateY(0); opacity: 1; }
-}
+/* time-char/roll-down removed — replaced by animateValue counting */
 
 .header {
     display: flex;
@@ -480,10 +421,15 @@ body {
 .main-stats {
     display: flex;
     flex-direction: column;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     background: rgba(255,255,255,0.05);
     padding: 10px;
     border-radius: 6px;
+}
+
+.cards-layout.horizontal .main-stats {
+    margin-bottom: 0;
+    flex: 1;
 }
 
 .main-row {
@@ -1032,15 +978,17 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(255,255,255,0.05);
 }
 
 .advanced-stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr 1fr 1fr;
     gap: 8px;
-    margin-bottom: 12px;
-    padding-top: 8px;
+    margin-top: 4px;
+    padding-top: 6px;
     border-top: 1px solid rgba(255,255,255,0.05);
 }
 
