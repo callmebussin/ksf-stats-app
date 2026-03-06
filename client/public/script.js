@@ -578,8 +578,11 @@ function animateValue(element, newText) {
     const oldNum = parseDisplayNumber(oldText);
     const newNum = parseDisplayNumber(newText);
 
-    // If both are valid numbers and the format matches, animate the count
-    if (oldNum !== null && newNum !== null && oldNum !== newNum && getNumberFormat(oldText) === getNumberFormat(newText)) {
+    const fmt = getNumberFormat(newText);
+    // Only animate when format matches AND format is safe to interpolate
+    // Skip fractions (N/M) — both parts change between maps, interpolation is meaningless
+    const animatable = fmt !== 'frac';
+    if (animatable && oldNum !== null && newNum !== null && oldNum !== newNum && getNumberFormat(oldText) === fmt) {
         const startTime = performance.now();
         const format = getNumberFormat(newText);
 
@@ -635,10 +638,10 @@ function parseDisplayNumber(text) {
 
 function getNumberFormat(text) {
     if (/^\d+:\d+\.\d+$/.test(text)) return 'time';
-    if (/^-?\d[\d,]*\s*\/\s*-?\d[\d,]*$/.test(text)) return 'rank';
     if (/^#[\d,]+$/.test(text)) return 'hash';
     if (/^[\d,.]+%$/.test(text)) return 'pct';
-    if (/^[\d,]+\/[\d,]+$/.test(text)) return 'frac';
+    // Rank format: N/M (animate numerator, keep denominator)
+    if (/^-?[\d,]+\/-?[\d,]+$/.test(text)) return 'rank';
     if (/^[+-]?\d/.test(text) && text.includes(':')) return 'time_diff';
     return 'plain';
 }
