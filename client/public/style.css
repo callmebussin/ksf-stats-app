@@ -166,8 +166,9 @@ body {
 
 .header {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
     padding-bottom: 8px;
     position: relative;
@@ -718,6 +719,10 @@ body {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    margin-bottom: 8px;
+}
+
+.profile-card-row:last-child {
     margin-bottom: 0;
 }
 
@@ -728,6 +733,7 @@ body {
 .profile-card-row > .info-card {
     flex: 1;
     min-width: 0;
+    margin-bottom: 0;
 }
 
 /* When only one card is visible in a row, it takes full width automatically via flex */
@@ -1124,16 +1130,28 @@ body {
 
 /* ── Pill Toggle Controls (inside header) ─────────────────── */
 .pill-toggles {
-    position: absolute;
-    left: 50%;
-    top: calc(50% - 4px);
-    transform: translate(-50%, -50%);
     display: flex;
     flex-direction: row;
     gap: 6px;
     align-items: center;
+    justify-content: center;
     -webkit-app-region: no-drag;
     z-index: 2;
+    /* In non-wide mode: own row above header content */
+    order: -1;
+    flex-basis: 100%;
+    margin-bottom: 6px;
+}
+
+/* In wide mode, pills are absolutely centered in the header */
+.wide-layout .pill-toggles {
+    position: absolute;
+    left: 50%;
+    top: calc(50% - 4px);
+    transform: translate(-50%, -50%);
+    order: 0;
+    flex-basis: auto;
+    margin-bottom: 0;
 }
 
 .pill-group {

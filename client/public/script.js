@@ -453,6 +453,38 @@ function broadcastPillState() {
     }).catch(() => {});
 }
 
+// Push display config to the server so OBS web view stays in sync
+function broadcastConfigToServer() {
+    const cfg = {
+        steamId: currentConfig.steamId,
+        refreshRate: currentConfig.refreshRate,
+        showMainMapStats: currentConfig.showMainMapStats,
+        showZoneBar: currentConfig.showZoneBar,
+        showRankCard: currentConfig.showRankCard,
+        showProfileStats: currentConfig.showProfileStats,
+        showDetailedStats: currentConfig.showDetailedStats,
+        showMapInfo: currentConfig.showMapInfo,
+        showMapImage: currentConfig.showMapImage,
+        showPointsBreakdown: currentConfig.showPointsBreakdown,
+        showHeader: currentConfig.showHeader,
+        showPillToggles: currentConfig.showPillToggles,
+        showStagePanel: currentConfig.showStagePanel,
+        showFooter: currentConfig.showFooter,
+        autoFollowStage: currentConfig.autoFollowStage,
+        horizontalLayout: currentConfig.horizontalLayout,
+        gameType: currentConfig.gameType,
+        surfType: currentConfig.surfType,
+        theme: currentConfig.theme,
+        zoneCompletedColor: currentConfig.zoneCompletedColor,
+        zoneNotCompletedColor: currentConfig.zoneNotCompletedColor
+    };
+    fetch(`${getBaseUrl()}/api/config`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cfg)
+    }).catch(() => {});
+}
+
 // Build query string for API calls
 function apiQuery() {
     const params = new URLSearchParams();
@@ -689,6 +721,9 @@ if (ipcRenderer) {
 
         currentConfig = { ...currentConfig, ...config };
         applyConfig();
+
+        // Push config to server so OBS web view stays in sync
+        broadcastConfigToServer();
         
         const steamIdChanged = currentConfig.steamId !== prev.steamId;
         const rateChanged = currentConfig.refreshRate !== prev.refreshRate;
@@ -729,13 +764,14 @@ if (ipcRenderer) {
                 const serverCfg = await resp.json();
                 if (serverCfg.steamId) currentConfig.steamId = serverCfg.steamId;
                 if (serverCfg.refreshRate) currentConfig.refreshRate = serverCfg.refreshRate;
-                if (serverCfg.showMainMapStats) currentConfig.showMainMapStats = true;
+                if (serverCfg.showMainMapStats !== undefined) currentConfig.showMainMapStats = serverCfg.showMainMapStats;
                 if (serverCfg.showProfileStats !== undefined) currentConfig.showProfileStats = serverCfg.showProfileStats;
                 if (serverCfg.showZoneBar !== undefined) currentConfig.showZoneBar = serverCfg.showZoneBar;
                 if (serverCfg.showRankCard !== undefined) currentConfig.showRankCard = serverCfg.showRankCard;
                 if (serverCfg.showProfileStats !== undefined) currentConfig.showProfileStats = serverCfg.showProfileStats;
                 if (serverCfg.showDetailedStats !== undefined) currentConfig.showDetailedStats = serverCfg.showDetailedStats;
                 if (serverCfg.showMapInfo !== undefined) currentConfig.showMapInfo = serverCfg.showMapInfo;
+                if (serverCfg.showMapImage !== undefined) currentConfig.showMapImage = serverCfg.showMapImage;
                 if (serverCfg.showPointsBreakdown !== undefined) currentConfig.showPointsBreakdown = serverCfg.showPointsBreakdown;
                 if (serverCfg.showHeader !== undefined) currentConfig.showHeader = serverCfg.showHeader;
                 if (serverCfg.showPillToggles !== undefined) currentConfig.showPillToggles = serverCfg.showPillToggles;
@@ -746,6 +782,8 @@ if (ipcRenderer) {
                 if (serverCfg.gameType) currentConfig.gameType = serverCfg.gameType;
                 if (serverCfg.surfType !== undefined) currentConfig.surfType = serverCfg.surfType;
                 if (serverCfg.theme) currentConfig.theme = serverCfg.theme;
+                if (serverCfg.zoneCompletedColor) currentConfig.zoneCompletedColor = serverCfg.zoneCompletedColor;
+                if (serverCfg.zoneNotCompletedColor) currentConfig.zoneNotCompletedColor = serverCfg.zoneNotCompletedColor;
             }
         } catch (e) {
             console.warn("Could not fetch server config, using URL params only", e);
@@ -976,6 +1014,14 @@ function applyRemoteConfig(cfg) {
             currentConfig.theme = cfg.theme;
             changed = true;
         }
+    }
+    if (cfg.zoneCompletedColor && cfg.zoneCompletedColor !== currentConfig.zoneCompletedColor) {
+        currentConfig.zoneCompletedColor = cfg.zoneCompletedColor;
+        changed = true;
+    }
+    if (cfg.zoneNotCompletedColor && cfg.zoneNotCompletedColor !== currentConfig.zoneNotCompletedColor) {
+        currentConfig.zoneNotCompletedColor = cfg.zoneNotCompletedColor;
+        changed = true;
     }
 
     if (changed) {

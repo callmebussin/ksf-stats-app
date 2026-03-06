@@ -693,6 +693,20 @@ app.get('/api/debug/stats', (req, res) => {
 
 let browseState = { zone: null, gameType: undefined, surfType: undefined };
 
+// ── Config sync endpoint (Electron -> overlay-config.json) ──────────────────
+app.post('/api/config', (req, res) => {
+    try {
+        const cfg = req.body;
+        if (cfg && typeof cfg === 'object') {
+            fs.writeFileSync(OVERLAY_CONFIG_PATH, JSON.stringify(cfg, null, 2));
+        }
+        res.json({ ok: true });
+    } catch (e) {
+        console.error("Failed to write overlay config:", e.message);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 app.post('/api/browse', (req, res) => {
     browseState = {
         zone: req.body.zone !== undefined ? req.body.zone : null,

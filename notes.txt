@@ -10,4 +10,4 @@ click the map name to copy to clipboard
 
 
 opacity doesnt update on stream
-wide mode doesn't update on stream
+wide mode doesn't update on stream -- FIXED: all display options now sync to web view via POST /api/config
