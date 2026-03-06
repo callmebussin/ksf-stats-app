@@ -278,6 +278,10 @@
                     <span>Header</span>
                     <div class="toggle"><input type="checkbox" id="show-header" checked><span class="toggle-slider"></span></div>
                 </label>
+                <label class="toggle-row" for="show-pill-toggles" id="show-pill-toggles-row">
+                    <span>Game/Style Toggles</span>
+                    <div class="toggle"><input type="checkbox" id="show-pill-toggles" checked><span class="toggle-slider"></span></div>
+                </label>
                 <label class="toggle-row" for="show-footer">
                     <span>Footer</span>
                     <div class="toggle"><input type="checkbox" id="show-footer" checked><span class="toggle-slider"></span></div>
@@ -406,6 +410,8 @@
             autoFollowStage: document.getElementById('auto-follow-stage'),
             horizontalLayout: document.getElementById('horizontal-layout'),
             showHeader: document.getElementById('show-header'),
+            showPillToggles: document.getElementById('show-pill-toggles'),
+            showPillTogglesRow: document.getElementById('show-pill-toggles-row'),
             showFooter: document.getElementById('show-footer'),
             showZoneBar: document.getElementById('show-zone-bar'),
             showRankCard: document.getElementById('show-rank-card'),
@@ -439,7 +445,9 @@
             els.autoFollowStage.checked = config.autoFollowStage !== false;
             els.horizontalLayout.checked = config.horizontalLayout || false;
             els.showHeader.checked = config.showHeader !== false;
+            els.showPillToggles.checked = config.showPillToggles !== false;
             els.showFooter.checked = config.showFooter !== false;
+            updateHeaderDeps();
             els.showZoneBar.checked = config.showZoneBar !== false;
             els.showRankCard.checked = config.showRankCard !== false;
             els.showProfileStats.checked = config.showProfileStats !== false;
@@ -478,6 +486,11 @@
             }
         });
 
+        function updateHeaderDeps() {
+            const show = els.showHeader.checked;
+            els.showPillTogglesRow.style.display = show ? '' : 'none';
+        }
+
         function updateStagePanelDeps() {
             const show = els.showStagePanel.checked;
             els.showDetailedStatsRow.style.display = show ? '' : 'none';
@@ -495,6 +508,7 @@
                     autoFollowStage: els.autoFollowStage.checked,
                     horizontalLayout: els.horizontalLayout.checked,
                     showHeader: els.showHeader.checked,
+                    showPillToggles: els.showPillToggles.checked,
                     showFooter: els.showFooter.checked,
                     showZoneBar: els.showZoneBar.checked,
                     showRankCard: els.showRankCard.checked,
@@ -525,7 +539,8 @@
         els.showMainMapStats.addEventListener('change', autoSave);
         els.autoFollowStage.addEventListener('change', autoSave);
         els.horizontalLayout.addEventListener('change', autoSave);
-        els.showHeader.addEventListener('change', autoSave);
+        els.showHeader.addEventListener('change', () => { updateHeaderDeps(); autoSave(); });
+        els.showPillToggles.addEventListener('change', autoSave);
         els.showFooter.addEventListener('change', autoSave);
         els.showZoneBar.addEventListener('change', autoSave);
         els.showRankCard.addEventListener('change', autoSave);

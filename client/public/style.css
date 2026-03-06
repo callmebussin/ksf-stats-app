@@ -1055,13 +1055,15 @@ body {
     to { transform: rotate(360deg); }
 }
 
-/* ── Pill Toggle Controls ──────────────────────────────────── */
+/* ── Pill Toggle Controls (inside header) ─────────────────── */
 .pill-toggles {
     display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin: 8px 0;
+    flex-direction: column;
+    gap: 4px;
+    align-items: center;
+    margin: 0 auto;
     -webkit-app-region: no-drag;
+    flex-shrink: 0;
 }
 
 .pill-group {
@@ -1072,19 +1074,19 @@ body {
     display: flex;
     align-items: center;
     background: rgba(255,255,255,0.12);
-    border-radius: 20px;
-    padding: 3px;
+    border-radius: 14px;
+    padding: 2px;
     position: relative;
     gap: 0;
 }
 
 .pill-indicator {
     position: absolute;
-    height: calc(100% - 6px);
-    border-radius: 17px;
+    height: calc(100% - 4px);
+    border-radius: 12px;
     background: #5b4fc4;
     transition: left 0.25s ease, width 0.25s ease;
-    top: 3px;
+    top: 2px;
     z-index: 0;
     pointer-events: none;
 }
@@ -1096,10 +1098,10 @@ body {
     background: none;
     color: var(--text-color);
     font-family: var(--font-family);
-    font-size: 11px;
+    font-size: 9px;
     font-weight: 700;
-    padding: 4px 12px;
-    border-radius: 17px;
+    padding: 3px 8px;
+    border-radius: 12px;
     cursor: pointer;
     transition: color 0.2s;
     white-space: nowrap;

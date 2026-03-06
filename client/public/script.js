@@ -17,6 +17,7 @@ let currentConfig = {
     showMapInfo: true,
     showPointsBreakdown: true,
     showHeader: true,
+    showPillToggles: true,
     showStagePanel: true,
     showFooter: true,
     autoFollowStage: true,
@@ -58,6 +59,50 @@ let displayedStageZone = null; // Tracks which zone the stage panel is actually 
 
 const zoneCache = new Map();
 let browsingZone = null;
+
+// ── Per-gameType/surfType snapshot cache ─────────────────────────────────────
+// Stores full UI state snapshots keyed by "gameType:surfType" so switching
+// pills restores instantly without hitting the API.
+const pillSnapshotCache = new Map();
+
+function pillCacheKey(gameType, surfType) {
+    return `${gameType || 'css'}:${surfType || 0}`;
+}
+
+function savePillSnapshot() {
+    const key = pillCacheKey(currentConfig.gameType, currentConfig.surfType);
+    pillSnapshotCache.set(key, {
+        zoneCache: new Map(zoneCache),
+        profileCache: profileCache ? { ...profileCache } : null,
+        lastProfileFetch,
+        currentMap,
+        currentZone,
+        browsingZone,
+        displayedStageZone,
+        timestamp: Date.now()
+    });
+}
+
+function loadPillSnapshot(gameType, surfType) {
+    const key = pillCacheKey(gameType, surfType);
+    const snap = pillSnapshotCache.get(key);
+    if (!snap) return false;
+    // Expire snapshots after 5 minutes
+    if (Date.now() - snap.timestamp > 300000) {
+        pillSnapshotCache.delete(key);
+        return false;
+    }
+    // Restore state
+    zoneCache.clear();
+    for (const [k, v] of snap.zoneCache) zoneCache.set(k, v);
+    profileCache = snap.profileCache;
+    lastProfileFetch = snap.lastProfileFetch;
+    currentMap = snap.currentMap;
+    currentZone = snap.currentZone;
+    browsingZone = snap.browsingZone;
+    displayedStageZone = snap.displayedStageZone;
+    return true;
+}
 
 const ui = {
     avatar: document.getElementById('player-avatar'),
@@ -152,9 +197,11 @@ function initPillToggles() {
             btn.addEventListener('click', () => {
                 const val = btn.dataset.value;
                 if (val === currentConfig.gameType) return;
+                const prevGame = currentConfig.gameType;
+                const prevSurf = currentConfig.surfType;
                 currentConfig.gameType = val;
                 updatePillUI(gameTypePill, val);
-                onGameOrSurfTypeChanged();
+                onGameOrSurfTypeChanged(prevGame, prevSurf);
             });
         });
     }
@@ -165,9 +212,11 @@ function initPillToggles() {
             btn.addEventListener('click', () => {
                 const val = parseInt(btn.dataset.value);
                 if (val === currentConfig.surfType) return;
+                const prevGame = currentConfig.gameType;
+                const prevSurf = currentConfig.surfType;
                 currentConfig.surfType = val;
                 updatePillUI(surfTypePill, val.toString());
-                onGameOrSurfTypeChanged();
+                onGameOrSurfTypeChanged(prevGame, prevSurf);
             });
         });
     }
@@ -200,15 +249,17 @@ function syncPillsFromConfig() {
     if (surfTypePill) updatePillUI(surfTypePill, (currentConfig.surfType || 0).toString());
 }
 
-function onGameOrSurfTypeChanged() {
-    // Clear cached data since it's for the old gameType/surfType
-    zoneCache.clear();
-    profileCache = null;
-    lastProfileFetch = 0;
-    currentMap = null;
-    browsingZone = null;
-    displayedStageZone = null;
-    mapStatsFetching = null;
+function onGameOrSurfTypeChanged(prevGameType, prevSurfType) {
+    // Save snapshot of current state before switching
+    const prevKey = pillCacheKey(prevGameType, prevSurfType);
+    // Temporarily set config back to save under the old key
+    const newGameType = currentConfig.gameType;
+    const newSurfType = currentConfig.surfType;
+    currentConfig.gameType = prevGameType;
+    currentConfig.surfType = prevSurfType;
+    savePillSnapshot();
+    currentConfig.gameType = newGameType;
+    currentConfig.surfType = newSurfType;
 
     // Save to config if in Electron
     if (ipcRenderer) {
@@ -221,10 +272,27 @@ function onGameOrSurfTypeChanged() {
     // Broadcast to OBS browser source
     broadcastPillState();
 
-    // Fetch fresh data immediately
-    saveLastRefreshTime(0);
-    isUpdating = false;
-    fetchStats();
+    // Try to restore from cache for the new combo
+    const restored = loadPillSnapshot(newGameType, newSurfType);
+
+    if (restored) {
+        // We have cached data — just re-render the UI from it
+        if (profileCache) populateProfile(profileCache);
+        refreshLayoutFromCache();
+        resizeOverlay();
+    } else {
+        // No cache — clear and fetch fresh
+        zoneCache.clear();
+        profileCache = null;
+        lastProfileFetch = 0;
+        currentMap = null;
+        browsingZone = null;
+        displayedStageZone = null;
+        mapStatsFetching = null;
+        saveLastRefreshTime(0);
+        isUpdating = false;
+        fetchStats();
+    }
 }
 
 function broadcastPillState() {
@@ -386,7 +454,7 @@ if (ipcRenderer) {
         const steamIdChanged = currentConfig.steamId !== prev.steamId;
         const rateChanged = currentConfig.refreshRate !== prev.refreshRate;
         const gameTypeChanged = currentConfig.gameType !== prev.gameType || currentConfig.surfType !== prev.surfType;
-        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats || currentConfig.showMapInfo !== prev.showMapInfo || currentConfig.showPointsBreakdown !== prev.showPointsBreakdown || currentConfig.showHeader !== prev.showHeader || currentConfig.showStagePanel !== prev.showStagePanel || currentConfig.showFooter !== prev.showFooter;
+        const layoutChanged = currentConfig.showMainMapStats !== prev.showMainMapStats || currentConfig.autoFollowStage !== prev.autoFollowStage || currentConfig.horizontalLayout !== prev.horizontalLayout || currentConfig.showZoneBar !== prev.showZoneBar || currentConfig.showRankCard !== prev.showRankCard || currentConfig.showProfileStats !== prev.showProfileStats || currentConfig.showDetailedStats !== prev.showDetailedStats || currentConfig.showMapInfo !== prev.showMapInfo || currentConfig.showPointsBreakdown !== prev.showPointsBreakdown || currentConfig.showHeader !== prev.showHeader || currentConfig.showPillToggles !== prev.showPillToggles || currentConfig.showStagePanel !== prev.showStagePanel || currentConfig.showFooter !== prev.showFooter;
 
         syncPillsFromConfig();
 
@@ -426,6 +494,7 @@ if (ipcRenderer) {
                 if (serverCfg.showMapInfo !== undefined) currentConfig.showMapInfo = serverCfg.showMapInfo;
                 if (serverCfg.showPointsBreakdown !== undefined) currentConfig.showPointsBreakdown = serverCfg.showPointsBreakdown;
                 if (serverCfg.showHeader !== undefined) currentConfig.showHeader = serverCfg.showHeader;
+                if (serverCfg.showPillToggles !== undefined) currentConfig.showPillToggles = serverCfg.showPillToggles;
                 if (serverCfg.showStagePanel !== undefined) currentConfig.showStagePanel = serverCfg.showStagePanel;
                 if (serverCfg.showFooter !== undefined) currentConfig.showFooter = serverCfg.showFooter;
                 if (serverCfg.autoFollowStage !== undefined) currentConfig.autoFollowStage = serverCfg.autoFollowStage;
@@ -539,6 +608,14 @@ function applyConfig() {
     // ── Header visibility ───────────────────────────────────────
     if (ui.header) ui.header.style.display = currentConfig.showHeader !== false ? '' : 'none';
 
+    // ── Pill toggles visibility (only if header is enabled) ─────
+    const pillToggles = document.getElementById('pill-toggles');
+    if (pillToggles) {
+        const showPills = currentConfig.showHeader !== false && currentConfig.showPillToggles !== false;
+        pillToggles.style.display = showPills ? '' : 'none';
+        if (showPills) requestAnimationFrame(() => syncPillsFromConfig());
+    }
+
     // ── Footer visibility ───────────────────────────────────────
     if (ui.footer) ui.footer.style.display = currentConfig.showFooter !== false ? '' : 'none';
 
@@ -614,6 +691,10 @@ function applyRemoteConfig(cfg) {
     }
     if (cfg.showHeader !== undefined && cfg.showHeader !== currentConfig.showHeader) {
         currentConfig.showHeader = cfg.showHeader;
+        changed = true;
+    }
+    if (cfg.showPillToggles !== undefined && cfg.showPillToggles !== currentConfig.showPillToggles) {
+        currentConfig.showPillToggles = cfg.showPillToggles;
         changed = true;
     }
     if (cfg.showStagePanel !== undefined && cfg.showStagePanel !== currentConfig.showStagePanel) {
@@ -770,6 +851,8 @@ async function fetchStats() {
         updateUI(data);
         fetchProfile();
         saveLastRefreshTime(Date.now());
+        // Update pill snapshot cache with fresh data
+        savePillSnapshot();
 
         if (!ipcRenderer) {
             try {

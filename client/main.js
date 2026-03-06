@@ -27,6 +27,7 @@ let appConfig = {
     showMapInfo: true,
     showPointsBreakdown: true,
     showHeader: true,
+    showPillToggles: true,
     showStagePanel: true,
     showFooter: true,
     autoFollowStage: true,
