@@ -266,7 +266,8 @@ const ui = {
     zoneBarTooltip: document.getElementById('zone-bar-tooltip'),
 
     mainStatStartVel: document.getElementById('main-stat-startvel'),
-    mainStatEndVel: document.getElementById('main-stat-endvel')
+    mainStatEndVel: document.getElementById('main-stat-endvel'),
+    stagePanel: document.querySelector('.stage-panel')
 };
 
 // ── Map background image cache ──────────────────────────────────────────────
@@ -1367,6 +1368,12 @@ function createZoneBox(zoneId, label, mapInfo) {
         const cached = zoneCache.get(zoneId);
         if (!cached) return;
 
+        // If main map panel is already showing, don't switch stage panel to main map zone
+        if (currentConfig.showMainMapStats) {
+            const isLinear = mapInfo && parseInt(mapInfo.type) === 1;
+            if (zoneId === 0 || (isLinear && zoneId === 1)) return;
+        }
+
         browsingZone = zoneId;
         displayedStageZone = zoneId;
         broadcastBrowseState(zoneId);
@@ -1814,6 +1821,27 @@ function setPlayerFlag(country) {
     }
 }
 
+// Check if the current map is linear with no bonuses (i.e. only a main map zone).
+function isLinearNoBonuses(mapInfo) {
+    if (!mapInfo) return false;
+    const isLinear = parseInt(mapInfo.type) === 1;
+    const bonuses = parseInt(mapInfo.bCount) || 0;
+    return isLinear && bonuses === 0;
+}
+
+// Show or hide the stage/bonus panel.
+// When showMainMapStats is on AND the map is linear-only (no bonuses),
+// there's nothing for the stage panel to show, so hide it.
+function updateStagePanelVisibility(mapInfo) {
+    if (!ui.stagePanel) return;
+    if (currentConfig.showMainMapStats && isLinearNoBonuses(mapInfo)) {
+        ui.stagePanel.style.display = 'none';
+        ui.sectionDivider.style.display = 'none';
+    } else {
+        ui.stagePanel.style.display = '';
+    }
+}
+
 // Centralized function to show/hide the Main Map panel.
 // Called from updateUI and from applyConfig/applyRemoteConfig on toggle.
 function showMainMapPanel(show, mainMapData) {
@@ -1857,6 +1885,8 @@ function refreshLayoutFromCache() {
         if (anyZone && anyZone.mapInfo) {
             if (anyZone.mapInfo.tier) setTierBadge(anyZone.mapInfo.tier);
             updateMapCompletionStatus(anyZone.mapInfo);
+            // Hide stage panel on linear-only maps when main map is separate
+            updateStagePanelVisibility(anyZone.mapInfo);
         }
 
         // Show stage nav
@@ -2010,6 +2040,9 @@ function updateUI(data) {
         // ── Map completion status in header ──────────────────────────
         updateMapCompletionStatus(data.mapInfo);
 
+        // ── Stage/Bonus panel visibility (hide on linear-only when main map is separate)
+        updateStagePanelVisibility(data.mapInfo);
+
         // ── Stage/Bonus panel logic ──────────────────────────────────
         ui.stageNav.style.display = 'flex';
 
@@ -2066,6 +2099,8 @@ function updateUI(data) {
         ui.mainMapSection.classList.remove('expanded');
         ui.sectionDivider.style.display = 'none';
         ui.stageNav.style.display = 'none';
+        // Restore stage panel visibility (may have been hidden for linear-only map)
+        if (ui.stagePanel) ui.stagePanel.style.display = '';
         ui.mapName.innerText = "Offline";
         ui.mapTierValue.innerText = '-';
         ui.profilePlaytime.innerText = '-';
