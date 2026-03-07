@@ -99,13 +99,14 @@ app.use((req, res, next) => {
 
 const limiter = rateLimit({
     windowMs: serverConfig.rateLimit.windowMs,
-    max: serverConfig.rateLimit.maxRequests,
+    max: serverConfig.rateLimit.maxRequests || 300,
     message: { error: "Too many requests, please try again later." }
 });
-// Only rate-limit the heavy KSF-proxied endpoints, not lightweight local sync endpoints
-// like /api/browse (polled every 1.5s by OBS) and /api/config
+// Only rate-limit the heavy KSF-proxied player endpoint.
+// Lightweight / read-from-cache endpoints are exempt.
 app.use('/api', (req, res, next) => {
-    if (req.path === '/browse' || req.path === '/config') return next();
+    // Exempt: /api/browse, /api/config (polled frequently), /api/profile, /api/mapstats (read-only, cached)
+    if (req.path === '/browse' || req.path === '/config' || req.path.startsWith('/profile') || req.path.startsWith('/mapstats')) return next();
     return limiter(req, res, next);
 });
 

@@ -578,10 +578,20 @@ document.addEventListener('click', (e) => {
 
 // Direct fetch + render for instant player switching.
 // Hits the server (which has pre-cached co-player data) and renders immediately.
+let directFetchController = null;
+
 async function directFetchAndRender(steamId) {
+    // Abort any previous direct fetch (rapid clicking)
+    if (directFetchController) {
+        directFetchController.abort();
+        directFetchController = null;
+    }
+    const controller = new AbortController();
+    directFetchController = controller;
+
     try {
         const baseUrl = getBaseUrl();
-        const response = await fetch(`${baseUrl}/api/player/${encodeURIComponent(steamId)}?${apiQuery()}`);
+        const response = await fetch(`${baseUrl}/api/player/${encodeURIComponent(steamId)}?${apiQuery()}`, { signal: controller.signal });
         if (!response.ok) return false;
         const data = await response.json();
         // Discard if player changed while we were fetching
@@ -594,7 +604,10 @@ async function directFetchAndRender(steamId) {
         saveLocalCache();
         return true;
     } catch (e) {
+        if (e.name === 'AbortError') return false;
         return false;
+    } finally {
+        if (directFetchController === controller) directFetchController = null;
     }
 }
 
@@ -603,10 +616,8 @@ ui.playerName.addEventListener('click', () => {
     if (!viewingOtherPlayer) return; // Not viewing someone else — nothing to do
 
     // Abort any in-flight requests
-    if (currentFetchController) {
-        currentFetchController.abort();
-        currentFetchController = null;
-    }
+    if (currentFetchController) { currentFetchController.abort(); currentFetchController = null; }
+    if (directFetchController) { directFetchController.abort(); directFetchController = null; }
     isUpdating = false;
     mapStatsFetching = null;
 
@@ -2263,10 +2274,8 @@ function updateUI(data) {
                     
                     item.addEventListener('click', () => {
                         // Abort any in-flight requests for the previous player
-                        if (currentFetchController) {
-                            currentFetchController.abort();
-                            currentFetchController = null;
-                        }
+                        if (currentFetchController) { currentFetchController.abort(); currentFetchController = null; }
+                        if (directFetchController) { directFetchController.abort(); directFetchController = null; }
                         isUpdating = false;
                         mapStatsFetching = null;
 
