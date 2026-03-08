@@ -1,6 +1,6 @@
 {
   "name": "ksf-stats-app",
-  "version": "1.2.2",
+  "version": "1.2.3",
   "description": "KSF Surf Timer stats app for OBS and desktop",
   "main": "main.js",
   "author": "bussn",
