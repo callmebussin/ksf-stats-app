@@ -272,43 +272,47 @@
         <div id="map-detail-view" class="map-detail-view" style="display: none;">
             <div class="map-detail-header">
                 <button id="map-detail-close" class="map-detail-close-btn">&times;</button>
+                <input type="text" id="compare-input" class="compare-input" placeholder="Compare: steam ID or name...">
                 <button id="map-detail-browse-btn" class="map-detail-browse-btn">View Maps</button>
             </div>
-            <div class="map-detail-hero">
+            <!-- Reuse map info card style for the hero -->
+            <div class="map-detail-map-card">
                 <div class="map-detail-hero-bg" id="map-detail-hero-bg"></div>
-                <div class="map-detail-hero-content">
-                    <span class="map-tier-badge" id="map-detail-tier">T-</span>
-                    <span class="map-detail-name" id="map-detail-name">-</span>
+                <div class="map-info-content">
+                    <div class="map-info-left">
+                        <div class="map-info-title-row">
+                            <span class="map-tier-badge" id="map-detail-tier">T-</span>
+                            <span class="map-detail-name" id="map-detail-name">-</span>
+                        </div>
+                        <div class="map-info-mapper" id="map-detail-mapper"></div>
+                    </div>
+                    <div class="map-info-stats">
+                        <span class="map-stat" id="map-detail-stage-stat">- Stages</span>
+                        <span class="map-stat" id="map-detail-bonus-stat">- Bonuses</span>
+                        <span class="map-stat map-stat-playtime" id="map-detail-playtime">-</span>
+                    </div>
                 </div>
-                <div class="map-detail-mapper" id="map-detail-mapper"></div>
-            </div>
-            <div class="map-detail-stats-grid">
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">Type</span>
-                    <span class="map-detail-stat-value" id="map-detail-type">-</span>
-                </div>
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">Stages</span>
-                    <span class="map-detail-stat-value" id="map-detail-stages">-</span>
-                </div>
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">Bonuses</span>
-                    <span class="map-detail-stat-value" id="map-detail-bonuses">-</span>
-                </div>
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">WR Time</span>
-                    <span class="map-detail-stat-value" id="map-detail-wr">-</span>
-                </div>
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">Map Finish</span>
-                    <span class="map-detail-stat-value" id="map-detail-finish">-</span>
-                </div>
-                <div class="map-detail-stat">
-                    <span class="map-detail-stat-label">Leniency</span>
-                    <span class="map-detail-stat-value" id="map-detail-leniency">-</span>
+                <div id="map-detail-zone-bar" class="zone-bar-container" style="display: none;">
+                    <div id="map-detail-zone-bar-stages" class="zone-bar-row"></div>
+                    <div id="map-detail-zone-bar-bonuses" class="zone-bar-row"></div>
                 </div>
             </div>
+            <!-- WR time row -->
+            <div class="map-detail-wr-row">
+                <span class="map-detail-wr-label">WR</span>
+                <span class="map-detail-wr-value" id="map-detail-wr">-</span>
+            </div>
+            <!-- Zone times (player's data) -->
             <div id="map-detail-zones" class="map-detail-zones"></div>
+            <!-- Compare section (hidden until compare is triggered) -->
+            <div id="compare-section" class="compare-section" style="display: none;">
+                <div class="compare-header">
+                    <span class="compare-player-name" id="compare-player-left">You</span>
+                    <span class="compare-vs">vs</span>
+                    <span class="compare-player-name" id="compare-player-right">-</span>
+                </div>
+                <div id="compare-rows" class="compare-rows"></div>
+            </div>
         </div>
 
         <!-- ── Maps Browser View ─────────────────────────────────── -->

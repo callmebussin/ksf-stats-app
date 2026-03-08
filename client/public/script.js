@@ -321,13 +321,19 @@ const ui = {
     mapDetailTier: document.getElementById('map-detail-tier'),
     mapDetailName: document.getElementById('map-detail-name'),
     mapDetailMapper: document.getElementById('map-detail-mapper'),
-    mapDetailType: document.getElementById('map-detail-type'),
-    mapDetailStages: document.getElementById('map-detail-stages'),
-    mapDetailBonuses: document.getElementById('map-detail-bonuses'),
+    mapDetailStageStat: document.getElementById('map-detail-stage-stat'),
+    mapDetailBonusStat: document.getElementById('map-detail-bonus-stat'),
+    mapDetailPlaytime: document.getElementById('map-detail-playtime'),
+    mapDetailZoneBar: document.getElementById('map-detail-zone-bar'),
+    mapDetailZoneBarStages: document.getElementById('map-detail-zone-bar-stages'),
+    mapDetailZoneBarBonuses: document.getElementById('map-detail-zone-bar-bonuses'),
     mapDetailWr: document.getElementById('map-detail-wr'),
-    mapDetailFinish: document.getElementById('map-detail-finish'),
-    mapDetailLeniency: document.getElementById('map-detail-leniency'),
     mapDetailZones: document.getElementById('map-detail-zones'),
+    compareInput: document.getElementById('compare-input'),
+    compareSection: document.getElementById('compare-section'),
+    comparePlayerLeft: document.getElementById('compare-player-left'),
+    comparePlayerRight: document.getElementById('compare-player-right'),
+    compareRows: document.getElementById('compare-rows'),
     mapsBrowserView: document.getElementById('maps-browser-view'),
     mapsBrowserClose: document.getElementById('maps-browser-close'),
     mapsSearch: document.getElementById('maps-search'),
@@ -2314,12 +2320,20 @@ function updateUI(data) {
         ui.avatar.style.backgroundImage = `url('https://avatars.steamstatic.com/${data.steamId64}_full.jpg')`;
     }
 
+    // When a sub-view (map detail / maps browser) is active, update data caches
+    // but don't touch main view DOM elements — they're hidden.
+    const mainViewActive = activeView === 'main';
+
     if (data.status === 'online') {
-        ui.statusIndicator.innerHTML = '<span class="status-dot"></span>ONLINE';
-        ui.statusIndicator.className = "status-badge online";
+        if (mainViewActive) {
+            ui.statusIndicator.innerHTML = '<span class="status-dot"></span>ONLINE';
+            ui.statusIndicator.className = "status-badge online";
+        }
         
-        if (ui.mapSpinner) ui.mapSpinner.style.display = 'none';
-        ui.mapName.innerText = formatMapDisplayName(data.map) || "Unknown Map";
+        if (mainViewActive) {
+            if (ui.mapSpinner) ui.mapSpinner.style.display = 'none';
+            ui.mapName.innerText = formatMapDisplayName(data.map) || "Unknown Map";
+        }
 
         // Set tier from mapInfo (if available from server status)
         if (data.mapInfo && data.mapInfo.tier) {
@@ -2327,16 +2341,18 @@ function updateUI(data) {
         }
 
         // Show map info card if toggle is on (it's now a standalone card outside profile-section)
-        if (currentConfig.showMapInfo !== false) {
-            ui.mapInfoCard.style.display = '';
-        } else {
-            ui.mapInfoCard.style.display = 'none';
+        if (mainViewActive) {
+            if (currentConfig.showMapInfo !== false) {
+                ui.mapInfoCard.style.display = '';
+            } else {
+                ui.mapInfoCard.style.display = 'none';
+            }
         }
 
         // Set map background image
-        setMapBackground(data.map);
+        if (mainViewActive) setMapBackground(data.map);
 
-        if (data.serverName) {
+        if (mainViewActive && data.serverName) {
             const totalOnline = data.serverPlayers ? data.serverPlayers.length : 1;
             ui.playingOnLabel.style.display = 'block';
             ui.serverInfo.innerText = `${data.serverName} \u2022 ${totalOnline} online`;
@@ -2406,7 +2422,7 @@ function updateUI(data) {
                     ui.playersList.appendChild(item);
                 }
             }
-        } else {
+        } else if (mainViewActive) {
             ui.playingOnLabel.style.display = 'none';
             ui.serverInfo.style.display = 'none';
         }
@@ -2448,82 +2464,72 @@ function updateUI(data) {
         updateMapPlaytime();
 
         // ── Main Map panel logic ─────────────────────────────────────
-        // Show the dedicated Main Map panel whenever the setting is on
-        // and we have zone 0 data, regardless of current zone.
         const mainMapData = data.mainMapStats || zoneCache.get(0) || null;
         const showMainMap = currentConfig.showMainMapStats && mainMapData;
-        showMainMapPanel(showMainMap, mainMapData);
-
-        // ── Map completion status in header ──────────────────────────
-        updateMapCompletionStatus(data.mapInfo);
-
-        // ── Stage/Bonus panel visibility (hide on linear-only when main map is separate)
-        updateStagePanelVisibility(data.mapInfo);
-
-        // ── Stage/Bonus panel logic ──────────────────────────────────
-        ui.stageNav.style.display = 'flex';
+        if (mainViewActive) {
+            showMainMapPanel(showMainMap, mainMapData);
+            updateMapCompletionStatus(data.mapInfo);
+            updateStagePanelVisibility(data.mapInfo);
+            ui.stageNav.style.display = 'flex';
+        }
 
         const prevZone = currentZone;
         currentZone = zoneId;
         const zoneChanged = prevZone !== null && prevZone !== zoneId && zoneId !== null;
 
-        // Determine which zone the stage panel should display.
-        // When showMainMapStats is on, the stage panel never shows zone 0
-        // (or zone 1 on linear maps, since that's the same as Main Map).
-        // When hideStages is on, skip stage zones (1-30) and show zone 0 or bonuses.
-        let stageZoneId = zoneId;
-        const isLinear = data.mapInfo && parseInt(data.mapInfo.type) === 1;
-        if (showMainMap && (stageZoneId === 0 || (isLinear && stageZoneId === 1))) {
-            // Player is on zone 0/1 but main map panel is showing it.
-            // Show the first available bonus/stage zone, or fall back.
-            const nonMainZones = getSortedCachedZones();
-            stageZoneId = nonMainZones.length > 0 ? nonMainZones[0] : (isLinear ? 1 : 0);
-        } else if (!showMainMap && currentConfig.hideStages && stageZoneId >= 1 && stageZoneId <= 30) {
-            // hideStages is on: player is on a stage but stages are hidden.
-            // Show zone 0 (main map) or first bonus instead.
-            const allowedZones = getSortedCachedZones();
-            stageZoneId = allowedZones.length > 0 ? allowedZones[0] : 0;
-        }
+        if (mainViewActive) {
+            // Determine which zone the stage panel should display.
+            let stageZoneId = zoneId;
+            const isLinear = data.mapInfo && parseInt(data.mapInfo.type) === 1;
+            if (showMainMap && (stageZoneId === 0 || (isLinear && stageZoneId === 1))) {
+                const nonMainZones = getSortedCachedZones();
+                stageZoneId = nonMainZones.length > 0 ? nonMainZones[0] : (isLinear ? 1 : 0);
+            } else if (!showMainMap && currentConfig.hideStages && stageZoneId >= 1 && stageZoneId <= 30) {
+                const allowedZones = getSortedCachedZones();
+                stageZoneId = allowedZones.length > 0 ? allowedZones[0] : 0;
+            }
 
-        const stageData = zoneCache.get(stageZoneId) || data;
-        displayedStageZone = stageZoneId;
+            const stageData = zoneCache.get(stageZoneId) || data;
+            displayedStageZone = stageZoneId;
 
-        if (currentConfig.autoFollowStage) {
-            browsingZone = null;
-            broadcastBrowseState(null);
-
-            populateZoneStats(stageData);
-            ui.stageSectionLabelText.innerText = formatZone(stageZoneId, data.mapInfo);
-            updateNavButtons();
-            updateZoneBarActive();
-        } else {
-            if (browsingZone === null || browsingZone === zoneId) {
+            if (currentConfig.autoFollowStage) {
+                browsingZone = null;
+                broadcastBrowseState(null);
                 populateZoneStats(stageData);
                 ui.stageSectionLabelText.innerText = formatZone(stageZoneId, data.mapInfo);
                 updateNavButtons();
                 updateZoneBarActive();
             } else {
-                updateNavButtons();
-                updateZoneBarActive();
+                if (browsingZone === null || browsingZone === zoneId) {
+                    populateZoneStats(stageData);
+                    ui.stageSectionLabelText.innerText = formatZone(stageZoneId, data.mapInfo);
+                    updateNavButtons();
+                    updateZoneBarActive();
+                } else {
+                    updateNavButtons();
+                    updateZoneBarActive();
+                }
             }
         }
         
-        if (data.playerName) {
+        if (mainViewActive && data.playerName) {
             ui.playerNameText.innerText = data.playerName;
             const country = data.country || (profileCache ? profileCache.country : null);
             setPlayerFlag(country);
         }
 
-        // Visual indicator when viewing another player's stats
-        if (viewingOtherPlayer) {
-            ui.playerName.classList.add('viewing-other');
-            ui.playerName.title = 'Click to return to your stats';
-        } else {
-            ui.playerName.classList.remove('viewing-other');
-            ui.playerName.title = '';
+        if (mainViewActive) {
+            // Visual indicator when viewing another player's stats
+            if (viewingOtherPlayer) {
+                ui.playerName.classList.add('viewing-other');
+                ui.playerName.title = 'Click to return to your stats';
+            } else {
+                ui.playerName.classList.remove('viewing-other');
+                ui.playerName.title = '';
+            }
         }
 
-    } else {
+    } else if (mainViewActive) {
         ui.statusIndicator.innerHTML = '<span class="status-dot"></span>OFFLINE';
         ui.statusIndicator.className = "status-badge offline";
         clearStats();
@@ -2531,7 +2537,6 @@ function updateUI(data) {
         ui.mainMapSection.classList.remove('expanded');
         ui.sectionDivider.style.display = 'none';
         ui.stageNav.style.display = 'none';
-        // Restore stage panel visibility (may have been hidden for linear-only map)
         if (ui.stagePanel) ui.stagePanel.style.display = '';
         ui.mapName.innerText = "Offline";
         ui.mapTierStat.innerText = 'T-';
@@ -2555,7 +2560,6 @@ function updateUI(data) {
             ui.playerNameText.innerText = data.rawStatus.name;
         }
 
-        // Visual indicator when viewing another player's stats (offline case)
         if (viewingOtherPlayer) {
             ui.playerName.classList.add('viewing-other');
             ui.playerName.title = 'Click to return to your stats';
@@ -2565,7 +2569,7 @@ function updateUI(data) {
         }
     }
 
-    resizeOverlay();
+    if (mainViewActive) resizeOverlay();
 }
 
 function resizeOverlay() {
@@ -2627,25 +2631,39 @@ function openMapDetail(mapName) {
     populateMapDetail(mapName);
 }
 
-async function populateMapDetail(mapName) {
-    // Set hero bg
-    const imgUrl = `https://ksf.surf/images/${encodeURIComponent(mapName)}.jpg`;
-    ui.mapDetailHeroBg.style.backgroundImage = `url('${imgUrl}')`;
+let mapDetailMapName = null; // Track which map the detail view is showing
 
-    // Set basic name
+async function populateMapDetail(mapName) {
+    mapDetailMapName = mapName;
+
+    // Hero bg image with fade
+    const imgUrl = `https://ksf.surf/images/${encodeURIComponent(mapName)}.jpg`;
+    ui.mapDetailHeroBg.classList.remove('loaded');
+    const img = new Image();
+    img.onload = () => {
+        if (mapDetailMapName === mapName) {
+            ui.mapDetailHeroBg.style.backgroundImage = `url('${imgUrl}')`;
+            ui.mapDetailHeroBg.classList.add('loaded');
+        }
+    };
+    img.src = imgUrl;
+
+    // Reset
     ui.mapDetailName.innerText = formatMapDisplayName(mapName);
     ui.mapDetailTier.innerText = 'T-';
     ui.mapDetailTier.style.background = '';
     ui.mapDetailMapper.innerText = '';
-    ui.mapDetailType.innerText = '-';
-    ui.mapDetailStages.innerText = '-';
-    ui.mapDetailBonuses.innerText = '-';
+    ui.mapDetailStageStat.innerText = '- Stages';
+    ui.mapDetailBonusStat.innerText = '- Bonuses';
+    ui.mapDetailPlaytime.innerText = '-';
     ui.mapDetailWr.innerText = '-';
-    ui.mapDetailFinish.innerText = '-';
-    ui.mapDetailLeniency.innerText = '-';
     ui.mapDetailZones.innerHTML = '';
+    ui.mapDetailZoneBar.style.display = 'none';
+    ui.compareSection.style.display = 'none';
+    ui.compareInput.value = '';
+    ui.mapDetailZones.style.display = '';
 
-    // Immediately populate from maps.json cache (has tier, type, stages, bonuses, mapper)
+    // Immediately populate from maps.json cache
     const localMap = mapsListCache && mapsListCache.find(m => m.name === mapName);
     if (localMap) {
         const t = parseInt(localMap.tier);
@@ -2655,12 +2673,15 @@ async function populateMapDetail(mapName) {
             ui.mapDetailTier.style.color = '#fff';
         }
         if (localMap.mapper) ui.mapDetailMapper.innerText = `by ${localMap.mapper}`;
-        ui.mapDetailType.innerText = localMap.type === 'linear' ? 'Linear' : 'Staged';
-        ui.mapDetailStages.innerText = localMap.stages || '0';
-        ui.mapDetailBonuses.innerText = localMap.bonuses || '0';
+        const isLin = localMap.type === 'linear';
+        ui.mapDetailStageStat.innerText = isLin ? 'Linear' : `${localMap.stages} Stages`;
+        ui.mapDetailBonusStat.innerText = `${localMap.bonuses} Bonuses`;
     }
 
-    // Then fetch full mapinfo from API for WR time, finish %, leniency, etc.
+    // Build zone bar from zoneCache (if this is the current map)
+    buildDetailZoneBar(mapName, localMap);
+
+    // Fetch full mapinfo from API for WR time
     let info = currentMapInfoData;
     if (!info || info.map !== mapName) {
         try {
@@ -2670,7 +2691,6 @@ async function populateMapDetail(mapName) {
     }
 
     if (info) {
-        // Tier badge (API may be more accurate than maps.json)
         const t = parseInt(info.tier);
         if (t >= 1 && t <= 8) {
             ui.mapDetailTier.innerText = `T${t}`;
@@ -2678,12 +2698,16 @@ async function populateMapDetail(mapName) {
             ui.mapDetailTier.style.color = '#fff';
         }
         if (info.mappersDisplay) ui.mapDetailMapper.innerText = `by ${info.mappersDisplay}`;
-        ui.mapDetailType.innerText = info.mapType === 1 ? 'Linear' : 'Staged';
-        ui.mapDetailStages.innerText = info.cpCount || '0';
-        ui.mapDetailBonuses.innerText = info.bCount || '0';
+        const isLin = info.mapType === 1;
+        ui.mapDetailStageStat.innerText = isLin ? 'Linear' : `${info.cpCount || 0} Stages`;
+        ui.mapDetailBonusStat.innerText = `${info.bCount || 0} Bonuses`;
         if (info.wrTime) ui.mapDetailWr.innerText = formatTime(info.wrTime.toString());
-        if (info.mapFinish != null) ui.mapDetailFinish.innerText = `${info.mapFinish.toFixed(1)}%`;
-        if (info.leniency != null) ui.mapDetailLeniency.innerText = info.leniency.toFixed(4);
+    }
+
+    // Playtime from zone 0
+    const zone0 = zoneCache.get(0);
+    if (zone0 && zone0.totalTime && currentMap === mapName) {
+        ui.mapDetailPlaytime.innerText = formatTotalTime(zone0.totalTime);
     }
 
     // Populate zone rows from zoneCache (player's data for this map)
@@ -2691,14 +2715,52 @@ async function populateMapDetail(mapName) {
     resizeOverlay();
 }
 
+function buildDetailZoneBar(mapName, localMap) {
+    ui.mapDetailZoneBarStages.innerHTML = '';
+    ui.mapDetailZoneBarBonuses.innerHTML = '';
+    if (currentMap !== mapName || zoneCache.size === 0) {
+        ui.mapDetailZoneBar.style.display = 'none';
+        return;
+    }
+
+    // Use mapInfo from zone cache to get stage/bonus counts
+    const anyZone = zoneCache.values().next().value;
+    const mapInfo = anyZone && anyZone.mapInfo;
+    if (!mapInfo && !localMap) {
+        ui.mapDetailZoneBar.style.display = 'none';
+        return;
+    }
+
+    const mapType = mapInfo ? parseInt(mapInfo.type) : (localMap && localMap.type === 'linear' ? 1 : 0);
+    const totalStages = mapInfo ? (parseInt(mapInfo.cpCount) || 0) : (localMap ? localMap.stages : 0);
+    const totalBonuses = mapInfo ? (parseInt(mapInfo.bCount) || 0) : (localMap ? localMap.bonuses : 0);
+    const isLinear = mapType === 1;
+
+    if (isLinear) {
+        const box = createZoneBox(0, 'Main', mapInfo);
+        ui.mapDetailZoneBarStages.appendChild(box);
+    } else {
+        for (let i = 1; i <= totalStages; i++) {
+            const box = createZoneBox(i, `S${i}`, mapInfo);
+            ui.mapDetailZoneBarStages.appendChild(box);
+        }
+    }
+
+    if (totalBonuses > 0) {
+        for (let i = 1; i <= totalBonuses; i++) {
+            const box = createZoneBox(30 + i, `B${i}`, mapInfo);
+            ui.mapDetailZoneBarBonuses.appendChild(box);
+        }
+    }
+
+    ui.mapDetailZoneBar.style.display = 'block';
+}
+
 function populateDetailZoneRows(mapName, info) {
     ui.mapDetailZones.innerHTML = '';
-    
-    // Only show zone rows if we have cached data for this map
     if (currentMap !== mapName || zoneCache.size === 0) return;
 
-    const sortedZones = Array.from(zoneCache.entries())
-        .sort(([a], [b]) => a - b);
+    const sortedZones = Array.from(zoneCache.entries()).sort(([a], [b]) => a - b);
 
     for (const [zoneId, zd] of sortedZones) {
         const row = document.createElement('div');
@@ -2720,6 +2782,110 @@ function populateDetailZoneRows(mapName, info) {
         row.appendChild(time);
         row.appendChild(rank);
         ui.mapDetailZones.appendChild(row);
+    }
+}
+
+// ── Compare Stats ───────────────────────────────────────────────────────────
+let compareFetching = false;
+
+async function compareWithPlayer(input) {
+    if (!input || !mapDetailMapName || compareFetching) return;
+    compareFetching = true;
+    ui.compareSection.style.display = 'block';
+    ui.comparePlayerRight.innerText = input;
+    ui.compareRows.innerHTML = '<div class="maps-browser-loading">Loading...</div>';
+    resizeOverlay();
+
+    try {
+        // Fetch the other player's map stats
+        const resp = await fetch(`${getBaseUrl()}/api/mapstats/${encodeURIComponent(input)}/${encodeURIComponent(mapDetailMapName)}?${apiQuery()}`);
+        if (!resp.ok) {
+            ui.compareRows.innerHTML = '<div class="maps-browser-loading">Player not found</div>';
+            return;
+        }
+        const result = await resp.json();
+        if (!result.zones) {
+            ui.compareRows.innerHTML = '<div class="maps-browser-loading">No data for this map</div>';
+            return;
+        }
+
+        // Set left player name
+        const playerName = lastFetchData && lastFetchData.playerName ? lastFetchData.playerName : 'You';
+        ui.comparePlayerLeft.innerText = playerName;
+
+        // Build compare rows
+        ui.compareRows.innerHTML = '';
+        ui.mapDetailZones.style.display = 'none'; // hide regular zone rows
+
+        // Get all zones from both players
+        const allZoneIds = new Set([
+            ...Array.from(zoneCache.keys()),
+            ...Object.keys(result.zones).map(Number)
+        ]);
+        const sortedIds = [...allZoneIds].sort((a, b) => a - b);
+
+        const anyZone = zoneCache.values().next().value;
+        const mapInfo = anyZone && anyZone.mapInfo;
+
+        for (const zoneId of sortedIds) {
+            const myZone = zoneCache.get(zoneId);
+            const theirZone = result.zones[zoneId];
+            const myTime = myZone && myZone.time ? parseFloat(myZone.time) : null;
+            const theirTime = theirZone && theirZone.time ? parseFloat(theirZone.time) : null;
+
+            const row = document.createElement('div');
+            row.className = 'compare-row';
+
+            // Left (my time)
+            const left = document.createElement('span');
+            left.className = 'cr-left';
+            if (myTime != null) {
+                const isFaster = theirTime != null && myTime < theirTime;
+                const isSlower = theirTime != null && myTime > theirTime;
+                left.classList.add(isFaster ? 'cr-faster' : isSlower ? 'cr-slower' : 'cr-neutral');
+                left.innerHTML = formatTime(myTime.toString());
+                if (theirTime != null && myTime !== theirTime) {
+                    const diff = myTime - theirTime;
+                    left.innerHTML += `<span class="cr-diff">${diff > 0 ? '+' : ''}${diff.toFixed(3)}</span>`;
+                }
+            } else {
+                left.classList.add('cr-neutral');
+                left.innerText = '--:--.--';
+            }
+
+            // Zone label
+            const zone = document.createElement('span');
+            zone.className = 'cr-zone';
+            zone.innerText = formatZone(zoneId, mapInfo);
+
+            // Right (their time)
+            const right = document.createElement('span');
+            right.className = 'cr-right';
+            if (theirTime != null) {
+                const isFaster = myTime != null && theirTime < myTime;
+                const isSlower = myTime != null && theirTime > myTime;
+                right.classList.add(isFaster ? 'cr-faster' : isSlower ? 'cr-slower' : 'cr-neutral');
+                right.innerHTML = formatTime(theirTime.toString());
+                if (myTime != null && myTime !== theirTime) {
+                    const diff = theirTime - myTime;
+                    right.innerHTML += `<span class="cr-diff">${diff > 0 ? '+' : ''}${diff.toFixed(3)}</span>`;
+                }
+            } else {
+                right.classList.add('cr-neutral');
+                right.innerText = '--:--.--';
+            }
+
+            row.appendChild(left);
+            row.appendChild(zone);
+            row.appendChild(right);
+            ui.compareRows.appendChild(row);
+        }
+    } catch (e) {
+        console.error('[COMPARE] Error:', e);
+        ui.compareRows.innerHTML = '<div class="maps-browser-loading">Error loading stats</div>';
+    } finally {
+        compareFetching = false;
+        resizeOverlay();
     }
 }
 
@@ -2849,4 +3015,12 @@ ui.mapsBrowserClose.addEventListener('click', () => {
 // Search input
 ui.mapsSearch.addEventListener('input', (e) => {
     filterMapsList(e.target.value);
+});
+
+// Compare input — trigger on Enter
+ui.compareInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+        const val = ui.compareInput.value.trim();
+        if (val) compareWithPlayer(val);
+    }
 });
