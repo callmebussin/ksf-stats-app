@@ -106,7 +106,7 @@
                         <div class="main-stats">
                             <div id="stage-nav" class="stage-nav" style="display: none;">
                                 <button id="stage-nav-left" class="stage-nav-btn">&lsaquo;</button>
-                                <span id="stage-section-label" class="section-label">Stage</span>
+                                <span id="stage-section-label" class="section-label"><span id="stage-section-label-text">Stage</span></span>
                                 <button id="stage-nav-right" class="stage-nav-btn">&rsaquo;</button>
                             </div>
                             <div class="main-row">
@@ -170,10 +170,13 @@
             <div class="map-info-bg" id="map-info-bg"></div>
             <div class="map-info-content">
                 <div class="map-info-left">
-                    <div class="map-info-name map-name-clickable" id="map-name" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading...</div>
+                    <div class="map-info-title-row">
+                        <span class="map-tier-badge" id="map-tier-stat">T-</span>
+                        <div class="map-info-name map-name-clickable" id="map-name" title="Click to copy"><span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading...</div>
+                    </div>
+                    <div class="map-info-mapper" id="map-mapper-name"></div>
                 </div>
                 <div class="map-info-stats">
-                    <span class="map-stat" id="map-tier-stat">Tier -</span>
                     <span class="map-stat" id="map-stage-stat">- Stages</span>
                     <span class="map-stat" id="map-bonus-stat">- Bonuses</span>
                     <span class="map-stat map-stat-playtime" id="map-playtime-stat">-</span>
@@ -263,6 +266,58 @@
         <div id="footer" class="footer">
             <span id="status-indicator" class="status-badge offline"><span class="status-dot"></span>OFFLINE</span>
             <span id="update-timer" class="update-timer">fetching data in --s</span>
+        </div>
+
+        <!-- ── Expanded Map Detail View ──────────────────────────── -->
+        <div id="map-detail-view" class="map-detail-view" style="display: none;">
+            <div class="map-detail-header">
+                <button id="map-detail-close" class="map-detail-close-btn">&times;</button>
+                <button id="map-detail-browse-btn" class="map-detail-browse-btn">View Maps</button>
+            </div>
+            <div class="map-detail-hero">
+                <div class="map-detail-hero-bg" id="map-detail-hero-bg"></div>
+                <div class="map-detail-hero-content">
+                    <span class="map-tier-badge" id="map-detail-tier">T-</span>
+                    <span class="map-detail-name" id="map-detail-name">-</span>
+                </div>
+                <div class="map-detail-mapper" id="map-detail-mapper"></div>
+            </div>
+            <div class="map-detail-stats-grid">
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">Type</span>
+                    <span class="map-detail-stat-value" id="map-detail-type">-</span>
+                </div>
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">Stages</span>
+                    <span class="map-detail-stat-value" id="map-detail-stages">-</span>
+                </div>
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">Bonuses</span>
+                    <span class="map-detail-stat-value" id="map-detail-bonuses">-</span>
+                </div>
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">WR Time</span>
+                    <span class="map-detail-stat-value" id="map-detail-wr">-</span>
+                </div>
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">Map Finish</span>
+                    <span class="map-detail-stat-value" id="map-detail-finish">-</span>
+                </div>
+                <div class="map-detail-stat">
+                    <span class="map-detail-stat-label">Leniency</span>
+                    <span class="map-detail-stat-value" id="map-detail-leniency">-</span>
+                </div>
+            </div>
+            <div id="map-detail-zones" class="map-detail-zones"></div>
+        </div>
+
+        <!-- ── Maps Browser View ─────────────────────────────────── -->
+        <div id="maps-browser-view" class="maps-browser-view" style="display: none;">
+            <div class="maps-browser-header">
+                <button id="maps-browser-close" class="map-detail-close-btn">&times;</button>
+                <input type="text" id="maps-search" class="maps-search-input" placeholder="Search maps or mappers...">
+            </div>
+            <div id="maps-browser-list" class="maps-browser-list"></div>
         </div>
     </div>
     <script src="script.js"></script>

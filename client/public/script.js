@@ -26,7 +26,8 @@ let currentConfig = {
     horizontalLayout: false,
     theme: {},
     zoneCompletedColor: "#2ecc71",
-    zoneNotCompletedColor: "#e74c3c"
+    zoneNotCompletedColor: "#e74c3c",
+    mapNameColor: "#ffffff"
 };
 
 let refreshInterval = null;
@@ -231,6 +232,7 @@ const ui = {
     mapName: document.getElementById('map-name'),
     mapSpinner: document.getElementById('map-spinner'),
     mapTierStat: document.getElementById('map-tier-stat'),
+    mapMapperName: document.getElementById('map-mapper-name'),
     mapStageStat: document.getElementById('map-stage-stat'),
     mapBonusStat: document.getElementById('map-bonus-stat'),
     mapPlaytimeStat: document.getElementById('map-playtime-stat'),
@@ -287,6 +289,7 @@ const ui = {
     sectionDivider: document.getElementById('section-divider'),
     stageNav: document.getElementById('stage-nav'),
     stageSectionLabel: document.getElementById('stage-section-label'),
+    stageSectionLabelText: document.getElementById('stage-section-label-text'),
     stageNavLeft: document.getElementById('stage-nav-left'),
     stageNavRight: document.getElementById('stage-nav-right'),
     stageContent: document.getElementById('stage-content'),
@@ -308,7 +311,27 @@ const ui = {
 
     mainStatStartVel: document.getElementById('main-stat-startvel'),
     mainStatEndVel: document.getElementById('main-stat-endvel'),
-    stagePanel: document.querySelector('.stage-panel')
+    stagePanel: document.querySelector('.stage-panel'),
+
+    // Map detail & browser views
+    mapDetailView: document.getElementById('map-detail-view'),
+    mapDetailClose: document.getElementById('map-detail-close'),
+    mapDetailBrowseBtn: document.getElementById('map-detail-browse-btn'),
+    mapDetailHeroBg: document.getElementById('map-detail-hero-bg'),
+    mapDetailTier: document.getElementById('map-detail-tier'),
+    mapDetailName: document.getElementById('map-detail-name'),
+    mapDetailMapper: document.getElementById('map-detail-mapper'),
+    mapDetailType: document.getElementById('map-detail-type'),
+    mapDetailStages: document.getElementById('map-detail-stages'),
+    mapDetailBonuses: document.getElementById('map-detail-bonuses'),
+    mapDetailWr: document.getElementById('map-detail-wr'),
+    mapDetailFinish: document.getElementById('map-detail-finish'),
+    mapDetailLeniency: document.getElementById('map-detail-leniency'),
+    mapDetailZones: document.getElementById('map-detail-zones'),
+    mapsBrowserView: document.getElementById('maps-browser-view'),
+    mapsBrowserClose: document.getElementById('maps-browser-close'),
+    mapsSearch: document.getElementById('maps-search'),
+    mapsBrowserList: document.getElementById('maps-browser-list')
 };
 
 // ── Map background image cache ──────────────────────────────────────────────
@@ -672,7 +695,7 @@ function navigateZone(direction) {
     const cached = zoneCache.get(newZone);
     if (cached) {
         populateZoneStats(cached);
-        ui.stageSectionLabel.innerText = formatZone(newZone, cached.mapInfo);
+        ui.stageSectionLabelText.innerText = formatZone(newZone, cached.mapInfo);
         updateNavButtons();
         updateZoneBarActive();
     }
@@ -958,6 +981,9 @@ if (ipcRenderer) {
 }
 
 function applyConfig() {
+    // Don't modify main view visibility if a sub-view (map detail / maps browser) is active
+    const inSubView = typeof activeView !== 'undefined' && activeView !== 'main';
+
     const root = document.documentElement;
     if (currentConfig.theme) {
          if (currentConfig.theme.accentColor) root.style.setProperty('--accent-color', currentConfig.theme.accentColor);
@@ -967,6 +993,7 @@ function applyConfig() {
     }
     if (currentConfig.zoneCompletedColor) root.style.setProperty('--zone-completed', currentConfig.zoneCompletedColor);
     if (currentConfig.zoneNotCompletedColor) root.style.setProperty('--zone-not-completed', currentConfig.zoneNotCompletedColor);
+    if (currentConfig.mapNameColor) root.style.setProperty('--map-name-color', currentConfig.mapNameColor);
     
     const card = document.getElementById('card');
     const layout = document.getElementById('cards-layout');
@@ -977,6 +1004,9 @@ function applyConfig() {
         card.classList.remove('wide-layout');
         layout.classList.remove('horizontal');
     }
+
+    // Skip all element visibility management when a sub-view is active
+    if (inSubView) { resizeOverlay(); return; }
 
     // ── Profile section visibility ─────────────────────────────
     const showRankCard = currentConfig.showRankCard !== false;
@@ -1165,6 +1195,10 @@ function applyRemoteConfig(cfg) {
     }
     if (cfg.zoneNotCompletedColor && cfg.zoneNotCompletedColor !== currentConfig.zoneNotCompletedColor) {
         currentConfig.zoneNotCompletedColor = cfg.zoneNotCompletedColor;
+        changed = true;
+    }
+    if (cfg.mapNameColor && cfg.mapNameColor !== currentConfig.mapNameColor) {
+        currentConfig.mapNameColor = cfg.mapNameColor;
         changed = true;
     }
 
@@ -1385,7 +1419,7 @@ function applyRemoteBrowseState(remoteZone) {
             if (cached) {
                 browsingZone = null;
                 populateZoneStats(cached);
-                ui.stageSectionLabel.innerText = formatZone(currentZone, cached.mapInfo);
+                ui.stageSectionLabelText.innerText = formatZone(currentZone, cached.mapInfo);
                 updateNavButtons();
                 updateZoneBarActive();
             }
@@ -1404,7 +1438,7 @@ function applyRemoteBrowseState(remoteZone) {
     displayedStageZone = zone;
 
     populateZoneStats(cached);
-    ui.stageSectionLabel.innerText = formatZone(zone, cached.mapInfo);
+    ui.stageSectionLabelText.innerText = formatZone(zone, cached.mapInfo);
     updateNavButtons();
     updateZoneBarActive();
 }
@@ -1473,13 +1507,53 @@ const TIER_COLORS = {
 function setTierBadge(tier) {
     const t = parseInt(tier);
     if (!t || t < 1 || t > 8) {
-        ui.mapTierStat.innerText = 'Tier -';
+        ui.mapTierStat.innerText = 'T-';
         ui.mapTierStat.style.color = '';
+        ui.mapTierStat.style.background = '';
         return;
     }
     currentMapTier = t;
-    ui.mapTierStat.innerText = `Tier ${t}`;
-    ui.mapTierStat.style.color = TIER_COLORS[t] || '';
+    ui.mapTierStat.innerText = `T${t}`;
+    ui.mapTierStat.style.color = '#fff';
+    ui.mapTierStat.style.background = TIER_COLORS[t] || '';
+}
+
+let currentMapInfoData = null; // Cached mapinfo response for current map
+
+// ── Fetch Map Info (mappers, WR time, etc.) ─────────────────────────────────
+let mapInfoFetching = null;
+
+async function fetchMapInfo(map) {
+    if (!map) return;
+    if (mapInfoFetching === map) return;
+    mapInfoFetching = map;
+    
+    try {
+        const resp = await fetch(`${getBaseUrl()}/api/mapinfo/${encodeURIComponent(map)}?game=${currentConfig.gameType}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        
+        if (currentMap !== map) return; // Map changed while fetching
+        
+        currentMapInfoData = data;
+        
+        // Cache for mapper search in maps browser
+        if (typeof cacheMapInfoForSearch === 'function') cacheMapInfoForSearch(map, data);
+        
+        // Update mapper display
+        if (ui.mapMapperName) {
+            ui.mapMapperName.innerText = data.mappersDisplay ? `by ${data.mappersDisplay}` : '';
+        }
+        
+        // Update tier badge if we got tier from mapinfo
+        if (data.tier) {
+            setTierBadge(data.tier);
+        }
+    } catch (e) {
+        console.error('[MAPINFO] Error:', e);
+    } finally {
+        if (mapInfoFetching === map) mapInfoFetching = null;
+    }
 }
 
 function updateMapPlaytime() {
@@ -1601,7 +1675,7 @@ function createZoneBox(zoneId, label, mapInfo) {
         broadcastBrowseState(zoneId);
 
         populateZoneStats(cached);
-        ui.stageSectionLabel.innerText = formatZone(zoneId, mapInfo);
+        ui.stageSectionLabelText.innerText = formatZone(zoneId, mapInfo);
         updateNavButtons();
         updateZoneBarActive();
     });
@@ -1725,8 +1799,11 @@ function showLoadingState() {
     ui.zoneBarContainer.style.display = 'none';
     ui.mapName.innerHTML = '<span id="map-spinner" class="spinner" style="display: inline-block;"></span> loading...';
     ui.mapSpinner = document.getElementById('map-spinner');
-    ui.mapTierStat.innerText = 'Tier -';
+    ui.mapTierStat.innerText = 'T-';
     ui.mapTierStat.style.color = '';
+    ui.mapTierStat.style.background = '';
+    if (ui.mapMapperName) ui.mapMapperName.innerText = '';
+    currentMapInfoData = null;
     ui.mapStageStat.innerText = '- Stages';
     ui.mapBonusStat.innerText = '- Bonuses';
     ui.mapPlaytimeStat.innerText = '-';
@@ -2196,6 +2273,16 @@ function refreshLayoutFromCache() {
             updateStagePanelVisibility(anyZone.mapInfo);
         }
 
+        // Restore mapper info and tier badges
+        if (currentMapInfoData) {
+            if (ui.mapMapperName) {
+                ui.mapMapperName.innerText = currentMapInfoData.mappersDisplay ? `by ${currentMapInfoData.mappersDisplay}` : '';
+            }
+        } else {
+            // Re-fetch mapinfo if not cached
+            fetchMapInfo(currentMap);
+        }
+
         // Show stage nav
         ui.stageNav.style.display = 'flex';
     }
@@ -2216,7 +2303,7 @@ function refreshLayoutFromCache() {
     const cached = zoneCache.get(stageZoneId);
     if (cached) {
         populateZoneStats(cached);
-        ui.stageSectionLabel.innerText = formatZone(stageZoneId, cached.mapInfo);
+        ui.stageSectionLabelText.innerText = formatZone(stageZoneId, cached.mapInfo);
         updateNavButtons();
         updateZoneBarActive();
     }
@@ -2332,8 +2419,11 @@ function updateUI(data) {
             zoneCache.clear();
             browsingZone = null;
             displayedStageZone = null;
+            currentMapInfoData = null;
+            mapInfoFetching = null;
             currentMap = data.map;
             fetchMapStats(data.map, data);
+            fetchMapInfo(data.map); // Fetch mapper info, WR times, etc.
         } else if (data.map) {
             // Re-fetch all zone stats on every poll so stages/bonuses stay current
             fetchMapStats(data.map, data);
@@ -2406,13 +2496,13 @@ function updateUI(data) {
             broadcastBrowseState(null);
 
             populateZoneStats(stageData);
-            ui.stageSectionLabel.innerText = formatZone(stageZoneId, data.mapInfo);
+            ui.stageSectionLabelText.innerText = formatZone(stageZoneId, data.mapInfo);
             updateNavButtons();
             updateZoneBarActive();
         } else {
             if (browsingZone === null || browsingZone === zoneId) {
                 populateZoneStats(stageData);
-                ui.stageSectionLabel.innerText = formatZone(stageZoneId, data.mapInfo);
+                ui.stageSectionLabelText.innerText = formatZone(stageZoneId, data.mapInfo);
                 updateNavButtons();
                 updateZoneBarActive();
             } else {
@@ -2447,8 +2537,11 @@ function updateUI(data) {
         // Restore stage panel visibility (may have been hidden for linear-only map)
         if (ui.stagePanel) ui.stagePanel.style.display = '';
         ui.mapName.innerText = "Offline";
-        ui.mapTierStat.innerText = 'Tier -';
+        ui.mapTierStat.innerText = 'T-';
         ui.mapTierStat.style.color = '';
+        ui.mapTierStat.style.background = '';
+        if (ui.mapMapperName) ui.mapMapperName.innerText = '';
+        currentMapInfoData = null;
         ui.mapStageStat.innerText = '- Stages';
         ui.mapBonusStat.innerText = '- Bonuses';
         ui.mapPlaytimeStat.innerText = '-';
@@ -2491,3 +2584,263 @@ function resizeOverlay() {
         });
     }, 450);
 }
+
+// ── Map Detail & Maps Browser Views ─────────────────────────────────────────
+
+let activeView = 'main'; // 'main' | 'detail' | 'browser'
+let mapsListCache = null;
+let mapsListFetching = false;
+
+// Elements that make up the "main" view — hidden when a sub-view is active
+function getMainViewElements() {
+    return [
+        ui.header, ui.cardsLayout, ui.mapInfoCard,
+        ui.profileSection, ui.footer, ui.emptyState
+    ];
+}
+
+function showView(view) {
+    activeView = view;
+    const mainEls = getMainViewElements();
+
+    if (view === 'main') {
+        // Restore main view
+        mainEls.forEach(el => { if (el) el.style.removeProperty('display'); });
+        ui.mapDetailView.style.display = 'none';
+        ui.mapsBrowserView.style.display = 'none';
+        // Re-apply config visibility (some sections may be toggled off)
+        applyConfig();
+    } else if (view === 'detail') {
+        mainEls.forEach(el => { if (el) el.style.display = 'none'; });
+        ui.mapDetailView.style.display = 'block';
+        ui.mapsBrowserView.style.display = 'none';
+    } else if (view === 'browser') {
+        mainEls.forEach(el => { if (el) el.style.display = 'none'; });
+        ui.mapDetailView.style.display = 'none';
+        ui.mapsBrowserView.style.display = 'block';
+    }
+    resizeOverlay();
+}
+
+// ── Map Detail View ─────────────────────────────────────────────────────────
+
+function openMapDetail(mapName) {
+    if (!mapName) return;
+    showView('detail');
+    populateMapDetail(mapName);
+}
+
+async function populateMapDetail(mapName) {
+    // Set hero bg
+    const imgUrl = `https://ksf.surf/images/${encodeURIComponent(mapName)}.jpg`;
+    ui.mapDetailHeroBg.style.backgroundImage = `url('${imgUrl}')`;
+
+    // Set basic name
+    ui.mapDetailName.innerText = formatMapDisplayName(mapName);
+    ui.mapDetailTier.innerText = 'T-';
+    ui.mapDetailTier.style.background = '';
+    ui.mapDetailMapper.innerText = '';
+    ui.mapDetailType.innerText = '-';
+    ui.mapDetailStages.innerText = '-';
+    ui.mapDetailBonuses.innerText = '-';
+    ui.mapDetailWr.innerText = '-';
+    ui.mapDetailFinish.innerText = '-';
+    ui.mapDetailLeniency.innerText = '-';
+    ui.mapDetailZones.innerHTML = '';
+
+    // Use cached mapinfo if available, otherwise fetch
+    let info = currentMapInfoData;
+    if (!info || info.map !== mapName) {
+        try {
+            const resp = await fetch(`${getBaseUrl()}/api/mapinfo/${encodeURIComponent(mapName)}?game=${currentConfig.gameType}`);
+            if (resp.ok) info = await resp.json();
+        } catch (e) {}
+    }
+
+    if (info) {
+        // Tier badge
+        const t = parseInt(info.tier);
+        if (t >= 1 && t <= 8) {
+            ui.mapDetailTier.innerText = `T${t}`;
+            ui.mapDetailTier.style.background = TIER_COLORS[t] || '';
+            ui.mapDetailTier.style.color = '#fff';
+        }
+        ui.mapDetailMapper.innerText = info.mappersDisplay ? `by ${info.mappersDisplay}` : '';
+        ui.mapDetailType.innerText = info.mapType === 1 ? 'Linear' : 'Staged';
+        ui.mapDetailStages.innerText = info.cpCount || '0';
+        ui.mapDetailBonuses.innerText = info.bCount || '0';
+        if (info.wrTime) ui.mapDetailWr.innerText = formatTime(info.wrTime.toString());
+        if (info.mapFinish != null) ui.mapDetailFinish.innerText = `${info.mapFinish.toFixed(1)}%`;
+        if (info.leniency != null) ui.mapDetailLeniency.innerText = info.leniency.toFixed(4);
+    }
+
+    // Populate zone rows from zoneCache (player's data for this map)
+    populateDetailZoneRows(mapName, info);
+    resizeOverlay();
+}
+
+function populateDetailZoneRows(mapName, info) {
+    ui.mapDetailZones.innerHTML = '';
+    
+    // Only show zone rows if we have cached data for this map
+    if (currentMap !== mapName || zoneCache.size === 0) return;
+
+    const sortedZones = Array.from(zoneCache.entries())
+        .sort(([a], [b]) => a - b);
+
+    for (const [zoneId, zd] of sortedZones) {
+        const row = document.createElement('div');
+        row.className = 'map-detail-zone-row';
+
+        const label = document.createElement('span');
+        label.className = 'zone-label';
+        label.innerText = formatZone(zoneId, info || (zd && zd.mapInfo));
+
+        const time = document.createElement('span');
+        time.className = 'zone-time';
+        time.innerText = zd.time ? formatTime(zd.time) : '--:--.--';
+
+        const rank = document.createElement('span');
+        rank.className = 'zone-rank';
+        rank.innerText = zd.rank && zd.totalRanks ? `${zd.rank}/${zd.totalRanks}` : '-/-';
+
+        row.appendChild(label);
+        row.appendChild(time);
+        row.appendChild(rank);
+        ui.mapDetailZones.appendChild(row);
+    }
+}
+
+// ── Maps Browser View ───────────────────────────────────────────────────────
+
+function openMapsBrowser() {
+    showView('browser');
+    ui.mapsSearch.value = '';
+    ui.mapsBrowserList.innerHTML = '<div class="maps-browser-loading">Loading maps...</div>';
+    fetchMapsList();
+}
+
+async function fetchMapsList() {
+    if (mapsListFetching) return;
+    mapsListFetching = true;
+
+    try {
+        const resp = await fetch(`${getBaseUrl()}/api/maps?game=${currentConfig.gameType}`);
+        if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+        const maps = await resp.json();
+        mapsListCache = maps;
+        renderMapsList(maps);
+    } catch (e) {
+        console.error('[MAPS] Error fetching maps list:', e);
+        ui.mapsBrowserList.innerHTML = '<div class="maps-browser-loading">Failed to load maps</div>';
+    } finally {
+        mapsListFetching = false;
+    }
+}
+
+function renderMapsList(maps) {
+    ui.mapsBrowserList.innerHTML = '';
+    if (!maps || maps.length === 0) {
+        ui.mapsBrowserList.innerHTML = '<div class="maps-browser-loading">No maps found</div>';
+        return;
+    }
+
+    for (const m of maps) {
+        const card = document.createElement('div');
+        card.className = 'maps-browser-card';
+        card.dataset.mapName = m.name;
+
+        const tierBadge = document.createElement('span');
+        tierBadge.className = 'map-card-tier';
+        tierBadge.innerText = `T${m.tier}`;
+        tierBadge.style.background = TIER_COLORS[m.tier] || 'rgba(255,255,255,0.1)';
+
+        const name = document.createElement('span');
+        name.className = 'map-card-name';
+        name.innerText = formatMapDisplayName(m.name);
+
+        const type = document.createElement('span');
+        type.className = 'map-card-type';
+        type.innerText = m.type || '';
+
+        const meta = document.createElement('span');
+        meta.className = 'map-card-meta';
+        const parts = [];
+        if (m.stages) parts.push(`${m.stages}s`);
+        if (m.bonuses) parts.push(`${m.bonuses}b`);
+        meta.innerText = parts.join(' ');
+
+        card.appendChild(tierBadge);
+        card.appendChild(name);
+        card.appendChild(type);
+        card.appendChild(meta);
+
+        card.addEventListener('click', () => {
+            openMapDetail(m.name);
+        });
+
+        ui.mapsBrowserList.appendChild(card);
+    }
+    resizeOverlay();
+}
+
+function filterMapsList(query) {
+    if (!mapsListCache) return;
+    const q = query.toLowerCase().trim();
+    if (!q) {
+        renderMapsList(mapsListCache);
+        return;
+    }
+    // Filter by map name or mapper name (fetch mapinfo per card is too expensive,
+    // so we filter by name only; mapper search triggers a lazy lookup)
+    const filtered = mapsListCache.filter(m => {
+        const nameMatch = m.name.toLowerCase().includes(q);
+        // Also check if mapper name is stored (from mapinfo cache)
+        const cached = mapInfoCache_client.get(m.name);
+        const mapperMatch = cached && cached.mappersDisplay && cached.mappersDisplay.toLowerCase().includes(q);
+        return nameMatch || mapperMatch;
+    });
+    renderMapsList(filtered);
+}
+
+// Simple client-side cache of mapinfo for mapper search
+const mapInfoCache_client = new Map();
+
+// When mapinfo is fetched, cache it for search purposes
+function cacheMapInfoForSearch(mapName, data) {
+    if (data && data.mappersDisplay) {
+        mapInfoCache_client.set(mapName, data);
+    }
+}
+
+// ── Event Handlers for Views ────────────────────────────────────────────────
+
+// Click on map info card opens detail view
+ui.mapInfoCard.addEventListener('click', (e) => {
+    // Don't open detail when clicking the map name (that's copy-to-clipboard)
+    if (e.target.closest('.map-name-clickable')) return;
+    // Don't open from zone bar clicks
+    if (e.target.closest('.zone-bar-container')) return;
+    if (!currentMap) return;
+    openMapDetail(currentMap);
+});
+
+// Close map detail
+ui.mapDetailClose.addEventListener('click', () => {
+    showView('main');
+});
+
+// View Maps button
+ui.mapDetailBrowseBtn.addEventListener('click', () => {
+    openMapsBrowser();
+});
+
+// Close maps browser — go back to detail if we came from there, else main
+ui.mapsBrowserClose.addEventListener('click', () => {
+    showView('main');
+});
+
+// Search input
+ui.mapsSearch.addEventListener('input', (e) => {
+    filterMapsList(e.target.value);
+});

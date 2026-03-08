@@ -685,6 +685,191 @@ app.get('/api/mapstats/:input/:map', async (req, res) => {
     }
 });
 
+// ── Map Info Endpoint ───────────────────────────────────────────────────────
+// Fetches detailed map info (mappers, WR times, leniency) from the KSF mapinfo API.
+// Cached at the KSF response cache layer (30s), plus a longer in-memory cache since
+// map metadata rarely changes.
+const mapInfoCache = new Map();
+const MAP_INFO_CACHE_TTL = 300000; // 5 minutes
+
+app.get('/api/mapinfo/:map', async (req, res) => {
+    const { map } = req.params;
+    const gameType = req.query.game || serverConfig.defaultGame || 'css';
+
+    if (!map) {
+        return res.status(400).json({ error: "Missing map name" });
+    }
+
+    const cacheKey = `${gameType}:${map}`;
+    const cached = mapInfoCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < MAP_INFO_CACHE_TTL) {
+        return res.json(cached.data);
+    }
+
+    try {
+        const url = `${KSF_BASE_URL}/${gameType}/map/${map}/mapinfo`;
+        const response = await fetchKSFData(url);
+
+        if (!response || response.status !== 'OK' || !response.data) {
+            return res.status(502).json({ error: "Failed to fetch map info from KSF API" });
+        }
+
+        const d = response.data;
+        const settings = d.MapSettings || {};
+        const leniency = d.MapLeniency || {};
+
+        // Build mapper string: "Mapper1 & Mapper2"
+        const mappers = (d.Mappers || []).map(m => m.mapperName).filter(Boolean);
+
+        const result = {
+            map,
+            tier: settings.tier ? parseInt(settings.tier) : null,
+            mapType: settings.maptype ? parseInt(settings.maptype) : null,
+            cpCount: settings.cp_count ? parseInt(settings.cp_count) : 0,
+            bCount: settings.b_count ? parseInt(settings.b_count) : 0,
+            wrTime: leniency.wrTime ? parseFloat(leniency.wrTime) : null,
+            mapFinish: settings.map_finish ? parseFloat(settings.map_finish) : null,
+            stageFinish: settings.stage_finish ? parseFloat(settings.stage_finish) : null,
+            bonusFinish: settings.bonus_finish ? parseFloat(settings.bonus_finish) : null,
+            mappers: mappers,
+            mappersDisplay: mappers.length > 0 ? mappers.join(' & ') : null,
+            leniency: leniency.leniency ? parseFloat(leniency.leniency) : null
+        };
+
+        mapInfoCache.set(cacheKey, { data: result, timestamp: Date.now() });
+        res.json(result);
+
+    } catch (error) {
+        console.error(`${c.red}[MAPINFO]${c.reset} ${c.red}${error.message}${c.reset}`);
+        res.status(500).json({ error: "Internal Server Error", details: error.message });
+    }
+});
+
+// ── Maps List Endpoint ──────────────────────────────────────────────────────
+// Scrapes the ksf.surf maps page and caches the result.
+// Returns an array of { name, type, tier, stages, bonuses, leniency, date, ratings, average }.
+const mapsListCache = {}; // keyed by gameType
+const MAPS_LIST_CACHE_TTL = 600000; // 10 minutes
+
+app.get('/api/maps', async (req, res) => {
+    const gameType = req.query.game || serverConfig.defaultGame || 'css';
+    const cacheKey = gameType;
+
+    if (mapsListCache[cacheKey] && (Date.now() - mapsListCache[cacheKey].timestamp) < MAPS_LIST_CACHE_TTL) {
+        return res.json(mapsListCache[cacheKey].data);
+    }
+
+    try {
+        // Try the KSF API first with known endpoints
+        const apiUrls = [
+            `${KSF_BASE_URL}/${gameType}/maps`,
+            `${KSF_BASE_URL}/${gameType}/maplist`,
+            `${KSF_BASE_URL}/${gameType}/allmaps`,
+        ];
+
+        let maps = [];
+        
+        for (const url of apiUrls) {
+            try {
+                const apiResp = await fetchKSFData(url);
+                if (apiResp && apiResp.status === 'OK' && Array.isArray(apiResp.data)) {
+                    // API returned a maps array — parse it
+                    for (const m of apiResp.data) {
+                        const name = m.map || m.mapname || m.name;
+                        if (!name || !name.startsWith('surf_')) continue;
+                        maps.push({
+                            name,
+                            type: m.maptype == 1 ? 'linear' : 'staged',
+                            tier: parseInt(m.tier) || null,
+                            stages: parseInt(m.cp_count || m.stages) || 0,
+                            bonuses: parseInt(m.b_count || m.bonuses) || 0,
+                            leniency: parseFloat(m.leniency) || null
+                        });
+                    }
+                    if (maps.length > 0) {
+                        console.log(`${c.cyan}[MAPS]${c.reset} ${c.green}Got ${maps.length} maps from KSF API${c.reset} (${url})`);
+                        break;
+                    }
+                }
+            } catch (e) { /* try next URL */ }
+        }
+
+        // Fallback: scrape ksf.surf maps page (paginated, multiple pages)
+        if (maps.length === 0) {
+            console.log(`${c.cyan}[MAPS]${c.reset} KSF API didn't work, scraping ksf.surf...`);
+            const baseUrl = gameType === 'css100t' ? 'https://ksf.surf/maps?game=css100t' : 'https://ksf.surf/maps';
+            
+            // Fetch multiple pages to get all maps
+            for (let page = 1; page <= 50; page++) {
+                const pageUrl = page === 1 ? baseUrl : `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}page=${page}`;
+                try {
+                    const resp = await axios.get(pageUrl, { timeout: 10000 });
+                    const html = resp.data;
+                    
+                    // Parse from RSC flight data chunks
+                    const scriptRegex = /self\.__next_f\.push\(\[[\d,]+,"((?:[^"\\]|\\.)*)"\]\)/g;
+                    let match;
+                    let foundOnPage = 0;
+                    
+                    while ((match = scriptRegex.exec(html)) !== null) {
+                        const chunk = match[1].replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+                        const mapRowRegex = /"(surf_[a-z0-9_]+)","(staged|linear)",(\d+),(\d+),(\d+),([\d.]+)/g;
+                        let rowMatch;
+                        while ((rowMatch = mapRowRegex.exec(chunk)) !== null) {
+                            maps.push({
+                                name: rowMatch[1],
+                                type: rowMatch[2],
+                                tier: parseInt(rowMatch[3]),
+                                stages: parseInt(rowMatch[4]),
+                                bonuses: parseInt(rowMatch[5]),
+                                leniency: parseFloat(rowMatch[6])
+                            });
+                            foundOnPage++;
+                        }
+                    }
+                    
+                    // Fallback: extract surf_ names from visible text
+                    if (foundOnPage === 0) {
+                        const textContent = html.replace(/<[^>]+>/g, '\n');
+                        const surfNames = [...textContent.matchAll(/(surf_[a-z0-9_]+(?:_fix)?)/g)].map(m => m[1]);
+                        const unique = [...new Set(surfNames)].filter(n => n.length > 5);
+                        for (const name of unique) {
+                            maps.push({ name, type: null, tier: null, stages: null, bonuses: null, leniency: null });
+                            foundOnPage++;
+                        }
+                    }
+                    
+                    // If no maps found on this page, we've reached the end
+                    if (foundOnPage === 0) break;
+                } catch (e) {
+                    break; // Stop on error
+                }
+            }
+        }
+
+        // Deduplicate by name
+        const seen = new Set();
+        const unique = maps.filter(m => {
+            if (seen.has(m.name)) return false;
+            seen.add(m.name);
+            return true;
+        });
+
+        // Sort by tier, then name
+        unique.sort((a, b) => (a.tier || 99) - (b.tier || 99) || a.name.localeCompare(b.name));
+
+        console.log(`${c.cyan}[MAPS]${c.reset} Total: ${unique.length} maps`);
+        
+        mapsListCache[cacheKey] = { data: unique, timestamp: Date.now() };
+        res.json(unique);
+
+    } catch (error) {
+        console.error(`${c.red}[MAPS]${c.reset} ${c.red}${error.message}${c.reset}`);
+        if (mapsListCache[cacheKey]) return res.json(mapsListCache[cacheKey].data);
+        res.status(500).json({ error: "Failed to fetch maps list", details: error.message });
+    }
+});
+
 app.get('/api/profile/:input', async (req, res) => {
     const { input } = req.params;
     const gameType = req.query.game || serverConfig.defaultGame || 'css';

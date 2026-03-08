@@ -310,6 +310,7 @@
                         <div class="color-item">Text <input type="color" id="text-color" value="#ffffff"></div>
                         <div class="color-item">Accent <input type="color" id="accent-color" value="#3498db"></div>
                         <div class="color-item">Border <input type="color" id="border-color" value="#ffffff"></div>
+                        <div class="color-item">Map Name <input type="color" id="map-name-color" value="#ffffff"></div>
                         <div class="color-item">Completed <input type="color" id="zone-completed-color" value="#2ecc71"></div>
                         <div class="color-item">Incomplete <input type="color" id="zone-not-completed-color" value="#e74c3c"></div>
                     </div>
@@ -415,14 +416,14 @@
         const { ipcRenderer } = require('electron');
 
         const PRESETS = {
-            default:  { bgColor: "#000000", textColor: "#ecf0f1", accentColor: "#3498db", borderColor: "#ffffff", opacity: 100 },
-            light:    { bgColor: "#ffffff", textColor: "#4a3f6b", accentColor: "#7c5cbf", borderColor: "#d5cee6", opacity: 90 },
-            glass:    { bgColor: "#001f3f", textColor: "#7FDBFF", accentColor: "#0074D9", borderColor: "#39CCCC", opacity: 85 },
-            midnight: { bgColor: "#0d1117", textColor: "#c9d1d9", accentColor: "#58a6ff", borderColor: "#30363d", opacity: 95 },
-            ember:    { bgColor: "#1a0a0a", textColor: "#f5c6aa", accentColor: "#e74c3c", borderColor: "#5c2018", opacity: 95 },
-            forest:   { bgColor: "#0a1a0a", textColor: "#a8d5a2", accentColor: "#2ecc71", borderColor: "#1e4d2b", opacity: 95 },
-            sunset:   { bgColor: "#1a0f1e", textColor: "#f0c4ff", accentColor: "#e056a0", borderColor: "#4a2060", opacity: 90 },
-            arctic:   { bgColor: "#0e1a2b", textColor: "#d0e8ff", accentColor: "#00bcd4", borderColor: "#1e3a5f", opacity: 90 }
+            default:  { bgColor: "#000000", textColor: "#ecf0f1", accentColor: "#3498db", borderColor: "#ffffff", mapNameColor: "#ffffff", opacity: 100 },
+            light:    { bgColor: "#ffffff", textColor: "#4a3f6b", accentColor: "#7c5cbf", borderColor: "#d5cee6", mapNameColor: "#4a3f6b", opacity: 90 },
+            glass:    { bgColor: "#001f3f", textColor: "#7FDBFF", accentColor: "#0074D9", borderColor: "#39CCCC", mapNameColor: "#ffffff", opacity: 85 },
+            midnight: { bgColor: "#0d1117", textColor: "#c9d1d9", accentColor: "#58a6ff", borderColor: "#30363d", mapNameColor: "#ffffff", opacity: 95 },
+            ember:    { bgColor: "#1a0a0a", textColor: "#f5c6aa", accentColor: "#e74c3c", borderColor: "#5c2018", mapNameColor: "#ffffff", opacity: 95 },
+            forest:   { bgColor: "#0a1a0a", textColor: "#a8d5a2", accentColor: "#2ecc71", borderColor: "#1e4d2b", mapNameColor: "#ffffff", opacity: 95 },
+            sunset:   { bgColor: "#1a0f1e", textColor: "#f0c4ff", accentColor: "#e056a0", borderColor: "#4a2060", mapNameColor: "#ffffff", opacity: 90 },
+            arctic:   { bgColor: "#0e1a2b", textColor: "#d0e8ff", accentColor: "#00bcd4", borderColor: "#1e3a5f", mapNameColor: "#ffffff", opacity: 90 }
         };
 
         const els = {
@@ -459,6 +460,7 @@
                 accentColor: document.getElementById('accent-color'),
                 borderColor: document.getElementById('border-color')
             },
+            mapNameColor: document.getElementById('map-name-color'),
             zoneCompletedColor: document.getElementById('zone-completed-color'),
             zoneNotCompletedColor: document.getElementById('zone-not-completed-color')
         };
@@ -496,6 +498,7 @@
                 if (config.theme.accentColor) els.colors.accentColor.value = config.theme.accentColor;
                 if (config.theme.borderColor) els.colors.borderColor.value = config.theme.borderColor;
             }
+            if (config.mapNameColor) els.mapNameColor.value = config.mapNameColor;
             if (config.zoneCompletedColor) els.zoneCompletedColor.value = config.zoneCompletedColor;
             if (config.zoneNotCompletedColor) els.zoneNotCompletedColor.value = config.zoneNotCompletedColor;
         });
@@ -512,6 +515,7 @@
                 els.colors.textColor.value = p.textColor;
                 els.colors.accentColor.value = p.accentColor;
                 els.colors.borderColor.value = p.borderColor;
+                if (p.mapNameColor) els.mapNameColor.value = p.mapNameColor;
                 autoSave();
             }
         });
@@ -558,6 +562,7 @@
                     showPointsBreakdown: els.showPointsBreakdown.checked,
                     showStagePanel: els.showStagePanel.checked,
                     opacity: parseInt(els.opacity.value),
+                    mapNameColor: els.mapNameColor.value,
                     zoneCompletedColor: els.zoneCompletedColor.value,
                     zoneNotCompletedColor: els.zoneNotCompletedColor.value,
                     theme: {
@@ -596,6 +601,7 @@
         els.colors.textColor.addEventListener('input', autoSave);
         els.colors.accentColor.addEventListener('input', autoSave);
         els.colors.borderColor.addEventListener('input', autoSave);
+        els.mapNameColor.addEventListener('input', autoSave);
         els.zoneCompletedColor.addEventListener('input', autoSave);
         els.zoneNotCompletedColor.addEventListener('input', autoSave);
 
